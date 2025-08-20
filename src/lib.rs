@@ -52,15 +52,26 @@ mod tests {
     }
 
     #[test]
+    fn fail_get_element() {
+        let x = Tensor::new( vec![1.0, 0.0, -1.0], vec![1, 3]);
+        assert_eq!( x.get_nd(&[0, 3]), Err(String::from("coords went out of bounds")) );
+    }
+
+    #[test]
+    fn fail_get_element2() {
+        let x = Tensor::new( vec![1.0, 0.0, -1.0], vec![3, 1]);
+        assert_eq!( x.get_nd(&[0, 2]), Err(String::from("coords went out of bounds")) );
+    }
+
+    #[test]
     fn fail_from_coord_shape() {
         let x = Tensor::new( vec![1.0, 0.0, -1.0], vec![1, 3]);
         assert_eq!( x.get_nd(&[0, 0, 0]), Err(String::from("coords are nonsensical")) );
     }
 
     #[test]
-    fn fail_get_element() {
-        let x = Tensor::new( vec![1.0, 0.0, -1.0], vec![3, 1]);
-        assert_eq!( x.get_nd(&[0, 2]), Err(String::from("coords went out of bounds")) );
+    fn fail_from_coord_shape1() {
+        let x = Tensor::new( vec![1.0, 0.0, -1.0], vec![1, 3]);
+        assert_eq!( x.get_nd(&[0]), Err(String::from("coords are nonsensical")) );
     }
-
 }
