@@ -1,4 +1,4 @@
-use linear_algebra::Tensor;
+use tensor::Tensor;
 use std::process;
 
 fn main() {
