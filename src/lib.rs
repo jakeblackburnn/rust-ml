@@ -1,5 +1,6 @@
-pub mod error;
+
 mod tests;
+mod error;
 use error::TensorError;
 
 pub struct Tensor {
@@ -75,6 +76,110 @@ impl<'a> TensorView<'a> {
         }
     }
 
+    pub fn get(&self, coords: &[usize]) -> Result<f32, TensorError> {
+        if self.shape.len() != coords.len() {
+            return Err(TensorError::RankMismatch {
+                provided: coords.len(),
+                expected: self.shape.len(),
+            });
+        }
+
+        let mut idx = 0;
+
+        for rank in (0..coords.len()).rev() {
+            let rank_idx = coords[rank];
+            let rank_len = self.shape[rank];
+
+            if rank_idx >= rank_len {
+                return Err(TensorError::CoordsOutOfBounds {
+                    rank: rank + 1,
+                    provided: rank_idx,
+                    max: rank_len - 1,
+                });
+            }
+
+            idx += self.strides[rank] * rank_idx;
+        }
+        Ok(self.elements[idx])
+    }
+
+    pub fn add(&self, other: &TensorView) -> Result<Tensor, TensorError> {
+        if self.shape != other.shape {
+            // return error
+        }
+
+        let len = self.shape.iter().product();
+        let mut results = vec![0.0; len];
+        let mut coords = vec![0; self.shape.len()];
+
+        for i in 0..len {
+            let self_elem = self.get(&coords)?;
+            let other_elem = other.get(&coords)?;
+            results[i] = self_elem + other_elem;
+
+            // increment coords
+            for i in ( 0..coords.len() ).rev() {
+                coords[i] += 1;
+                if coords[i] < self.shape[i] {
+                    break;
+                }
+                coords[i] = 0;
+            }
+        }
+
+        Ok( Tensor::new(results, self.shape.clone()))
+    }
+
+    pub fn sub(&self, other: &TensorView) -> Result<Tensor, TensorError> {
+        if self.shape != other.shape {
+            // return error
+        }
+
+        let len = self.shape.iter().product();
+        let mut results = vec![0.0; len];
+        let mut coords = vec![0; self.shape.len()];
+
+        for i in 0..len {
+            let self_elem = self.get(&coords)?;
+            let other_elem = other.get(&coords)?;
+            results[i] = self_elem - other_elem;
+
+            // increment coords
+            for i in ( 0..coords.len() ).rev() {
+                coords[i] += 1;
+                if coords[i] < self.shape[i] {
+                    break;
+                }
+                coords[i] = 0;
+            }
+        }
+
+
+        Ok( Tensor::new(results, self.shape.clone()))
+    }
+
+    pub fn dot(&self, other: &TensorView) -> Result<f32, TensorError> {
+        if self.shape.len() != 1 || other.shape.len() != 1 {
+            return Err(TensorError::RankMismatch { 
+                provided: if self.shape.len() != 1 { self.shape.len() } else { other.shape.len() }, 
+                expected: 1 
+            });
+        }
+        
+        if self.shape[0] != other.shape[0] {
+            // return vec length mismatch error
+        }
+        
+        let mut sum = 0.0;
+        for i in 0..self.shape[0] {
+            let a = self.get(&[i])?;
+            let b = other.get(&[i])?;
+            sum += a * b;
+        }
+        
+        Ok(sum)
+    }
+
     pub fn matmul(&self, other: &TensorView) -> Result<Tensor, TensorError> {
         if self.shape.len() != 2 || other.shape.len() != 2 {
             return Err(TensorError::RankMismatch { 
@@ -103,54 +208,6 @@ impl<'a> TensorView<'a> {
         Ok(Tensor::new(result, vec![m, n]))
     }
 
-    pub fn get(&self, coords: &[usize]) -> Result<f32, TensorError> {
-        if self.shape.len() != coords.len() {
-            return Err(TensorError::RankMismatch {
-                provided: coords.len(),
-                expected: self.shape.len(),
-            });
-        }
-
-        let mut idx = 0;
-
-        for rank in (0..coords.len()).rev() {
-            let rank_idx = coords[rank];
-            let rank_len = self.shape[rank];
-
-            if rank_idx >= rank_len {
-                return Err(TensorError::CoordsOutOfBounds {
-                    rank: rank + 1,
-                    provided: rank_idx,
-                    max: rank_len - 1,
-                });
-            }
-
-            idx += self.strides[rank] * rank_idx;
-        }
-        Ok(self.elements[idx])
-    }
-
-    pub fn dot(&self, other: &TensorView) -> Result<f32, TensorError> {
-        if self.shape.len() != 1 || other.shape.len() != 1 {
-            return Err(TensorError::RankMismatch { 
-                provided: if self.shape.len() != 1 { self.shape.len() } else { other.shape.len() }, 
-                expected: 1 
-            });
-        }
-        
-        if self.shape[0] != other.shape[0] {
-            // return vec length mismatch error
-        }
-        
-        let mut sum = 0.0;
-        for i in 0..self.shape[0] {
-            let a = self.get(&[i])?;
-            let b = other.get(&[i])?;
-            sum += a * b;
-        }
-        
-        Ok(sum)
-    }
 
     pub fn at(&self, idx: usize) -> Result<TensorView, TensorError> {
         if idx >= self.shape[0] {
