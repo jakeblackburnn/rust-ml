@@ -1,4 +1,3 @@
-
 mod tests;
 mod error;
 use error::TensorError;
@@ -156,6 +155,27 @@ impl<'a> TensorView<'a> {
 
 
         Ok( Tensor::new(results, self.shape.clone()))
+    }
+
+    pub fn transpose(&self) -> Result<Tensor, TensorError> {
+        if self.shape.len() != 2 {
+            // return error
+        }
+
+        let (m, n) = ( self.shape[0], self.shape[1] );
+
+        let mut result = vec![0.0; n * m];
+        let result_shape = vec![n, m];
+
+        for i in 0..m {
+            for j in 0..n {
+                let item = self.get(&[i, j])?;
+                let new_idx = j * m + i;
+                result[new_idx] = item;
+            }
+        }
+
+        Ok( Tensor::new(result, result_shape) )
     }
 
     pub fn dot(&self, other: &TensorView) -> Result<f32, TensorError> {

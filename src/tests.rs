@@ -8,6 +8,230 @@ fn get_vector_element() {
 }
 
 #[test]
+fn transpose_matx() {
+    let x = Tensor::new(vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0], vec![2, 3]);
+    let xview = TensorView::new(&x);
+
+    let y = xview.transpose().unwrap();
+    let yview = TensorView::new(&y);
+
+    assert_eq!(yview.elements, vec![1.0, 4.0, 2.0, 5.0, 3.0, 6.0]);
+    assert_eq!(yview.shape, vec![3, 2]);
+}
+
+#[test]
+fn transpose_2x2_square() {
+    let x = Tensor::new(vec![1.0, 2.0, 3.0, 4.0], vec![2, 2]);
+    let xview = TensorView::new(&x);
+
+    let y = xview.transpose().unwrap();
+    let yview = TensorView::new(&y);
+
+    assert_eq!(yview.elements, vec![1.0, 3.0, 2.0, 4.0]);
+    assert_eq!(yview.shape, vec![2, 2]);
+}
+
+#[test]
+fn transpose_3x3_square() {
+    let x = Tensor::new(vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0], vec![3, 3]);
+    let xview = TensorView::new(&x);
+
+    let y = xview.transpose().unwrap();
+    let yview = TensorView::new(&y);
+
+    assert_eq!(yview.elements, vec![1.0, 4.0, 7.0, 2.0, 5.0, 8.0, 3.0, 6.0, 9.0]);
+    assert_eq!(yview.shape, vec![3, 3]);
+}
+
+#[test]
+fn transpose_1x4_rectangular() {
+    let x = Tensor::new(vec![1.0, 2.0, 3.0, 4.0], vec![1, 4]);
+    let xview = TensorView::new(&x);
+
+    let y = xview.transpose().unwrap();
+    let yview = TensorView::new(&y);
+
+    assert_eq!(yview.elements, vec![1.0, 2.0, 3.0, 4.0]);
+    assert_eq!(yview.shape, vec![4, 1]);
+}
+
+#[test]
+fn transpose_4x1_rectangular() {
+    let x = Tensor::new(vec![1.0, 2.0, 3.0, 4.0], vec![4, 1]);
+    let xview = TensorView::new(&x);
+
+    let y = xview.transpose().unwrap();
+    let yview = TensorView::new(&y);
+
+    assert_eq!(yview.elements, vec![1.0, 2.0, 3.0, 4.0]);
+    assert_eq!(yview.shape, vec![1, 4]);
+}
+
+#[test]
+fn transpose_2x5_rectangular() {
+    let x = Tensor::new(vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0], vec![2, 5]);
+    let xview = TensorView::new(&x);
+
+    let y = xview.transpose().unwrap();
+    let yview = TensorView::new(&y);
+
+    assert_eq!(yview.elements, vec![1.0, 6.0, 2.0, 7.0, 3.0, 8.0, 4.0, 9.0, 5.0, 10.0]);
+    assert_eq!(yview.shape, vec![5, 2]);
+}
+
+#[test]
+fn transpose_1x1_single_element() {
+    let x = Tensor::new(vec![42.0], vec![1, 1]);
+    let xview = TensorView::new(&x);
+
+    let y = xview.transpose().unwrap();
+    let yview = TensorView::new(&y);
+
+    assert_eq!(yview.elements, vec![42.0]);
+    assert_eq!(yview.shape, vec![1, 1]);
+}
+
+#[test]
+fn transpose_double_transpose_identity() {
+    let x = Tensor::new(vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0], vec![2, 3]);
+    let xview = TensorView::new(&x);
+
+    let y = xview.transpose().unwrap();
+    let yview = TensorView::new(&y);
+    let z = yview.transpose().unwrap();
+    let zview = TensorView::new(&z);
+
+    assert_eq!(zview.elements, xview.elements);
+    assert_eq!(zview.shape, xview.shape);
+}
+
+#[test]
+fn transpose_element_position_mapping() {
+    let x = Tensor::new(vec![11.0, 12.0, 13.0, 21.0, 22.0, 23.0, 31.0, 32.0, 33.0], vec![3, 3]);
+    let xview = TensorView::new(&x);
+
+    let y = xview.transpose().unwrap();
+    let yview = TensorView::new(&y);
+
+    assert_eq!(xview.get(&[0, 0]).unwrap(), yview.get(&[0, 0]).unwrap()); // 11
+    assert_eq!(xview.get(&[0, 1]).unwrap(), yview.get(&[1, 0]).unwrap()); // 12
+    assert_eq!(xview.get(&[0, 2]).unwrap(), yview.get(&[2, 0]).unwrap()); // 13
+    assert_eq!(xview.get(&[1, 0]).unwrap(), yview.get(&[0, 1]).unwrap()); // 21
+    assert_eq!(xview.get(&[1, 1]).unwrap(), yview.get(&[1, 1]).unwrap()); // 22
+    assert_eq!(xview.get(&[1, 2]).unwrap(), yview.get(&[2, 1]).unwrap()); // 23
+    assert_eq!(xview.get(&[2, 0]).unwrap(), yview.get(&[0, 2]).unwrap()); // 31
+    assert_eq!(xview.get(&[2, 1]).unwrap(), yview.get(&[1, 2]).unwrap()); // 32
+    assert_eq!(xview.get(&[2, 2]).unwrap(), yview.get(&[2, 2]).unwrap()); // 33
+}
+
+#[test]
+fn transpose_shape_transformation() {
+    let matrices = vec![
+        (vec![2, 3], vec![3, 2]),
+        (vec![1, 5], vec![5, 1]), 
+        (vec![4, 1], vec![1, 4]),
+        (vec![3, 3], vec![3, 3]),
+    ];
+
+    for (original_shape, expected_shape) in matrices {
+        let size = original_shape[0] * original_shape[1];
+        let data: Vec<f32> = (1..=size).map(|i| i as f32).collect();
+        let x = Tensor::new(data, original_shape.clone());
+        let xview = TensorView::new(&x);
+
+        let y = xview.transpose().unwrap();
+        let yview = TensorView::new(&y);
+
+        assert_eq!(yview.shape, expected_shape);
+    }
+}
+
+#[test]
+fn transpose_identity_matrix() {
+    let x = Tensor::new(vec![1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0], vec![3, 3]);
+    let xview = TensorView::new(&x);
+
+    let y = xview.transpose().unwrap();
+    let yview = TensorView::new(&y);
+
+    assert_eq!(yview.elements, xview.elements);
+    assert_eq!(yview.shape, vec![3, 3]);
+}
+
+#[test]
+fn transpose_zero_matrix() {
+    let x = Tensor::new(vec![0.0, 0.0, 0.0, 0.0, 0.0, 0.0], vec![2, 3]);
+    let xview = TensorView::new(&x);
+
+    let y = xview.transpose().unwrap();
+    let yview = TensorView::new(&y);
+
+    assert_eq!(yview.elements, vec![0.0, 0.0, 0.0, 0.0, 0.0, 0.0]);
+    assert_eq!(yview.shape, vec![3, 2]);
+}
+
+#[test]
+fn transpose_negative_values() {
+    let x = Tensor::new(vec![-1.0, -2.0, 3.0, 4.0, -5.0, 6.0], vec![2, 3]);
+    let xview = TensorView::new(&x);
+
+    let y = xview.transpose().unwrap();
+    let yview = TensorView::new(&y);
+
+    assert_eq!(yview.elements, vec![-1.0, 4.0, -2.0, -5.0, 3.0, 6.0]);
+    assert_eq!(yview.shape, vec![3, 2]);
+}
+
+#[test]
+fn transpose_decimal_precision() {
+    let x = Tensor::new(vec![1.25, 2.75, 3.125, 4.875], vec![2, 2]);
+    let xview = TensorView::new(&x);
+
+    let y = xview.transpose().unwrap();
+    let yview = TensorView::new(&y);
+
+    assert_eq!(yview.elements, vec![1.25, 3.125, 2.75, 4.875]);
+    assert_eq!(yview.shape, vec![2, 2]);
+}
+
+#[test]
+fn transpose_single_row() {
+    let x = Tensor::new(vec![1.0, 2.0, 3.0, 4.0, 5.0], vec![1, 5]);
+    let xview = TensorView::new(&x);
+
+    let y = xview.transpose().unwrap();
+    let yview = TensorView::new(&y);
+
+    assert_eq!(yview.elements, vec![1.0, 2.0, 3.0, 4.0, 5.0]);
+    assert_eq!(yview.shape, vec![5, 1]);
+}
+
+#[test]
+fn transpose_single_column() {
+    let x = Tensor::new(vec![10.0, 20.0, 30.0], vec![3, 1]);
+    let xview = TensorView::new(&x);
+
+    let y = xview.transpose().unwrap();
+    let yview = TensorView::new(&y);
+
+    assert_eq!(yview.elements, vec![10.0, 20.0, 30.0]);
+    assert_eq!(yview.shape, vec![1, 3]);
+}
+
+#[test]
+fn transpose_repeated_elements() {
+    let x = Tensor::new(vec![5.0, 5.0, 5.0, 7.0, 7.0, 7.0], vec![2, 3]);
+    let xview = TensorView::new(&x);
+
+    let y = xview.transpose().unwrap();
+    let yview = TensorView::new(&y);
+
+    assert_eq!(yview.elements, vec![5.0, 7.0, 5.0, 7.0, 5.0, 7.0]);
+    assert_eq!(yview.shape, vec![3, 2]);
+}
+
+
+#[test]
 fn add_vector() {
     let x = Tensor::new(vec![1.0, 0.0, -1.0], vec![3]);
     let y = Tensor::new(vec![1.0, 2.0, 3.0], vec![3]);
