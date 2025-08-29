@@ -12,6 +12,10 @@ impl Tensor {
         Tensor { elements, shape }
     }
 
+    pub fn view(&self) -> TensorView {
+        TensorView::new(&self)
+    }
+
     pub fn get_nd(&self, coords: &[usize]) -> Result<f32, TensorError> {
         // TODO: check that coords are sensical
         if self.shape.len() != coords.len() {

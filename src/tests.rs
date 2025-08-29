@@ -10,10 +10,10 @@ fn get_vector_element() {
 #[test]
 fn transpose_matx() {
     let x = Tensor::new(vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0], vec![2, 3]);
-    let xview = TensorView::new(&x);
+    let xview = x.view();
 
     let y = xview.transpose().unwrap();
-    let yview = TensorView::new(&y);
+    let yview = y.view();
 
     assert_eq!(yview.elements, vec![1.0, 4.0, 2.0, 5.0, 3.0, 6.0]);
     assert_eq!(yview.shape, vec![3, 2]);
@@ -22,10 +22,10 @@ fn transpose_matx() {
 #[test]
 fn transpose_2x2_square() {
     let x = Tensor::new(vec![1.0, 2.0, 3.0, 4.0], vec![2, 2]);
-    let xview = TensorView::new(&x);
+    let xview = x.view();
 
     let y = xview.transpose().unwrap();
-    let yview = TensorView::new(&y);
+    let yview = y.view();
 
     assert_eq!(yview.elements, vec![1.0, 3.0, 2.0, 4.0]);
     assert_eq!(yview.shape, vec![2, 2]);
@@ -34,10 +34,10 @@ fn transpose_2x2_square() {
 #[test]
 fn transpose_3x3_square() {
     let x = Tensor::new(vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0], vec![3, 3]);
-    let xview = TensorView::new(&x);
+    let xview = x.view();
 
     let y = xview.transpose().unwrap();
-    let yview = TensorView::new(&y);
+    let yview = y.view();
 
     assert_eq!(yview.elements, vec![1.0, 4.0, 7.0, 2.0, 5.0, 8.0, 3.0, 6.0, 9.0]);
     assert_eq!(yview.shape, vec![3, 3]);
@@ -46,10 +46,10 @@ fn transpose_3x3_square() {
 #[test]
 fn transpose_1x4_rectangular() {
     let x = Tensor::new(vec![1.0, 2.0, 3.0, 4.0], vec![1, 4]);
-    let xview = TensorView::new(&x);
+    let xview = x.view();
 
     let y = xview.transpose().unwrap();
-    let yview = TensorView::new(&y);
+    let yview = y.view();
 
     assert_eq!(yview.elements, vec![1.0, 2.0, 3.0, 4.0]);
     assert_eq!(yview.shape, vec![4, 1]);
@@ -58,10 +58,10 @@ fn transpose_1x4_rectangular() {
 #[test]
 fn transpose_4x1_rectangular() {
     let x = Tensor::new(vec![1.0, 2.0, 3.0, 4.0], vec![4, 1]);
-    let xview = TensorView::new(&x);
+    let xview = x.view();
 
     let y = xview.transpose().unwrap();
-    let yview = TensorView::new(&y);
+    let yview = y.view();
 
     assert_eq!(yview.elements, vec![1.0, 2.0, 3.0, 4.0]);
     assert_eq!(yview.shape, vec![1, 4]);
@@ -70,10 +70,10 @@ fn transpose_4x1_rectangular() {
 #[test]
 fn transpose_2x5_rectangular() {
     let x = Tensor::new(vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0], vec![2, 5]);
-    let xview = TensorView::new(&x);
+    let xview = x.view();
 
     let y = xview.transpose().unwrap();
-    let yview = TensorView::new(&y);
+    let yview = y.view();
 
     assert_eq!(yview.elements, vec![1.0, 6.0, 2.0, 7.0, 3.0, 8.0, 4.0, 9.0, 5.0, 10.0]);
     assert_eq!(yview.shape, vec![5, 2]);
@@ -82,10 +82,10 @@ fn transpose_2x5_rectangular() {
 #[test]
 fn transpose_1x1_single_element() {
     let x = Tensor::new(vec![42.0], vec![1, 1]);
-    let xview = TensorView::new(&x);
+    let xview = x.view();
 
     let y = xview.transpose().unwrap();
-    let yview = TensorView::new(&y);
+    let yview = y.view();
 
     assert_eq!(yview.elements, vec![42.0]);
     assert_eq!(yview.shape, vec![1, 1]);
@@ -94,12 +94,12 @@ fn transpose_1x1_single_element() {
 #[test]
 fn transpose_double_transpose_identity() {
     let x = Tensor::new(vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0], vec![2, 3]);
-    let xview = TensorView::new(&x);
+    let xview = x.view();
 
     let y = xview.transpose().unwrap();
-    let yview = TensorView::new(&y);
+    let yview = y.view();
     let z = yview.transpose().unwrap();
-    let zview = TensorView::new(&z);
+    let zview = z.view();
 
     assert_eq!(zview.elements, xview.elements);
     assert_eq!(zview.shape, xview.shape);
@@ -108,10 +108,10 @@ fn transpose_double_transpose_identity() {
 #[test]
 fn transpose_element_position_mapping() {
     let x = Tensor::new(vec![11.0, 12.0, 13.0, 21.0, 22.0, 23.0, 31.0, 32.0, 33.0], vec![3, 3]);
-    let xview = TensorView::new(&x);
+    let xview = x.view();
 
     let y = xview.transpose().unwrap();
-    let yview = TensorView::new(&y);
+    let yview = y.view();
 
     assert_eq!(xview.get(&[0, 0]).unwrap(), yview.get(&[0, 0]).unwrap()); // 11
     assert_eq!(xview.get(&[0, 1]).unwrap(), yview.get(&[1, 0]).unwrap()); // 12
@@ -137,10 +137,10 @@ fn transpose_shape_transformation() {
         let size = original_shape[0] * original_shape[1];
         let data: Vec<f32> = (1..=size).map(|i| i as f32).collect();
         let x = Tensor::new(data, original_shape.clone());
-        let xview = TensorView::new(&x);
+        let xview = x.view();
 
         let y = xview.transpose().unwrap();
-        let yview = TensorView::new(&y);
+        let yview = y.view();
 
         assert_eq!(yview.shape, expected_shape);
     }
@@ -149,10 +149,10 @@ fn transpose_shape_transformation() {
 #[test]
 fn transpose_identity_matrix() {
     let x = Tensor::new(vec![1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0], vec![3, 3]);
-    let xview = TensorView::new(&x);
+    let xview = x.view();
 
     let y = xview.transpose().unwrap();
-    let yview = TensorView::new(&y);
+    let yview = y.view();
 
     assert_eq!(yview.elements, xview.elements);
     assert_eq!(yview.shape, vec![3, 3]);
@@ -161,10 +161,10 @@ fn transpose_identity_matrix() {
 #[test]
 fn transpose_zero_matrix() {
     let x = Tensor::new(vec![0.0, 0.0, 0.0, 0.0, 0.0, 0.0], vec![2, 3]);
-    let xview = TensorView::new(&x);
+    let xview = x.view();
 
     let y = xview.transpose().unwrap();
-    let yview = TensorView::new(&y);
+    let yview = y.view();
 
     assert_eq!(yview.elements, vec![0.0, 0.0, 0.0, 0.0, 0.0, 0.0]);
     assert_eq!(yview.shape, vec![3, 2]);
@@ -173,10 +173,10 @@ fn transpose_zero_matrix() {
 #[test]
 fn transpose_negative_values() {
     let x = Tensor::new(vec![-1.0, -2.0, 3.0, 4.0, -5.0, 6.0], vec![2, 3]);
-    let xview = TensorView::new(&x);
+    let xview = x.view();
 
     let y = xview.transpose().unwrap();
-    let yview = TensorView::new(&y);
+    let yview = y.view();
 
     assert_eq!(yview.elements, vec![-1.0, 4.0, -2.0, -5.0, 3.0, 6.0]);
     assert_eq!(yview.shape, vec![3, 2]);
@@ -185,10 +185,10 @@ fn transpose_negative_values() {
 #[test]
 fn transpose_decimal_precision() {
     let x = Tensor::new(vec![1.25, 2.75, 3.125, 4.875], vec![2, 2]);
-    let xview = TensorView::new(&x);
+    let xview = x.view();
 
     let y = xview.transpose().unwrap();
-    let yview = TensorView::new(&y);
+    let yview = y.view();
 
     assert_eq!(yview.elements, vec![1.25, 3.125, 2.75, 4.875]);
     assert_eq!(yview.shape, vec![2, 2]);
@@ -197,10 +197,10 @@ fn transpose_decimal_precision() {
 #[test]
 fn transpose_single_row() {
     let x = Tensor::new(vec![1.0, 2.0, 3.0, 4.0, 5.0], vec![1, 5]);
-    let xview = TensorView::new(&x);
+    let xview = x.view();
 
     let y = xview.transpose().unwrap();
-    let yview = TensorView::new(&y);
+    let yview = y.view();
 
     assert_eq!(yview.elements, vec![1.0, 2.0, 3.0, 4.0, 5.0]);
     assert_eq!(yview.shape, vec![5, 1]);
@@ -209,10 +209,10 @@ fn transpose_single_row() {
 #[test]
 fn transpose_single_column() {
     let x = Tensor::new(vec![10.0, 20.0, 30.0], vec![3, 1]);
-    let xview = TensorView::new(&x);
+    let xview = x.view();
 
     let y = xview.transpose().unwrap();
-    let yview = TensorView::new(&y);
+    let yview = y.view();
 
     assert_eq!(yview.elements, vec![10.0, 20.0, 30.0]);
     assert_eq!(yview.shape, vec![1, 3]);
@@ -221,10 +221,10 @@ fn transpose_single_column() {
 #[test]
 fn transpose_repeated_elements() {
     let x = Tensor::new(vec![5.0, 5.0, 5.0, 7.0, 7.0, 7.0], vec![2, 3]);
-    let xview = TensorView::new(&x);
+    let xview = x.view();
 
     let y = xview.transpose().unwrap();
-    let yview = TensorView::new(&y);
+    let yview = y.view();
 
     assert_eq!(yview.elements, vec![5.0, 7.0, 5.0, 7.0, 5.0, 7.0]);
     assert_eq!(yview.shape, vec![3, 2]);
@@ -236,8 +236,8 @@ fn add_vector() {
     let x = Tensor::new(vec![1.0, 0.0, -1.0], vec![3]);
     let y = Tensor::new(vec![1.0, 2.0, 3.0], vec![3]);
 
-    let xview = TensorView::new(&x);
-    let yview = TensorView::new(&y);
+    let xview = x.view();
+    let yview = y.view();
 
     let result = xview.add(&yview).unwrap();
 
@@ -250,8 +250,8 @@ fn subtract_vector() {
     let x = Tensor::new(vec![1.0, 0.0, -1.0], vec![3]);
     let y = Tensor::new(vec![1.0, 2.0, 3.0], vec![3]);
 
-    let xview = TensorView::new(&x);
-    let yview = TensorView::new(&y);
+    let xview = x.view();
+    let yview = y.view();
 
     let result = xview.sub(&yview).unwrap();
 
@@ -261,10 +261,7 @@ fn subtract_vector() {
 
 #[test]
 fn multiply_vector() {
-    let x = Tensor::new(vec![1.0, 2.0, 3.0], vec![3]);
-    let xview = TensorView::new(&x);
-
-    let result = xview.mult(2.0).unwrap();
+    let result = Tensor::new(vec![1.0, 2.0, 3.0], vec![3]).view().mult(2.0).unwrap();
 
     assert_eq!(result.elements, vec![2.0, 4.0, 6.0]);
     assert_eq!(result.shape, vec![3]);
@@ -272,10 +269,7 @@ fn multiply_vector() {
 
 #[test]
 fn divide_vector() {
-    let x = Tensor::new(vec![2.0, 4.0, 6.0], vec![3]);
-    let xview = TensorView::new(&x);
-
-    let result = xview.div(2.0).unwrap();
+    let result = Tensor::new(vec![2.0, 4.0, 6.0], vec![3]).view().div(2.0).unwrap();
 
     assert_eq!(result.elements, vec![1.0, 2.0, 3.0]);
     assert_eq!(result.shape, vec![3]);
@@ -283,10 +277,7 @@ fn divide_vector() {
 
 #[test]
 fn multiply_matrix() {
-    let x = Tensor::new(vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0], vec![2, 3]);
-    let xview = TensorView::new(&x);
-
-    let result = xview.mult(3.0).unwrap();
+    let result = Tensor::new(vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0], vec![2, 3]).view().mult(3.0).unwrap();
 
     assert_eq!(result.elements, vec![3.0, 6.0, 9.0, 12.0, 15.0, 18.0]);
     assert_eq!(result.shape, vec![2, 3]);
@@ -294,10 +285,7 @@ fn multiply_matrix() {
 
 #[test]
 fn divide_matrix() {
-    let x = Tensor::new(vec![4.0, 8.0, 12.0, 16.0], vec![2, 2]);
-    let xview = TensorView::new(&x);
-
-    let result = xview.div(4.0).unwrap();
+    let result = Tensor::new(vec![4.0, 8.0, 12.0, 16.0], vec![2, 2]).view().div(4.0).unwrap();
 
     assert_eq!(result.elements, vec![1.0, 2.0, 3.0, 4.0]);
     assert_eq!(result.shape, vec![2, 2]);
@@ -305,10 +293,7 @@ fn divide_matrix() {
 
 #[test]
 fn multiply_by_zero() {
-    let x = Tensor::new(vec![1.0, 2.0, 3.0], vec![3]);
-    let xview = TensorView::new(&x);
-
-    let result = xview.mult(0.0).unwrap();
+    let result = Tensor::new(vec![1.0, 2.0, 3.0], vec![3]).view().mult(0.0).unwrap();
 
     assert_eq!(result.elements, vec![0.0, 0.0, 0.0]);
     assert_eq!(result.shape, vec![3]);
@@ -316,10 +301,7 @@ fn multiply_by_zero() {
 
 #[test]
 fn multiply_by_negative() {
-    let x = Tensor::new(vec![1.0, -2.0, 3.0], vec![3]);
-    let xview = TensorView::new(&x);
-
-    let result = xview.mult(-2.0).unwrap();
+    let result = Tensor::new(vec![1.0, -2.0, 3.0], vec![3]).view().mult(-2.0).unwrap();
 
     assert_eq!(result.elements, vec![-2.0, 4.0, -6.0]);
     assert_eq!(result.shape, vec![3]);
@@ -327,10 +309,7 @@ fn multiply_by_negative() {
 
 #[test]
 fn divide_by_decimal() {
-    let x = Tensor::new(vec![1.0, 2.0, 3.0], vec![3]);
-    let xview = TensorView::new(&x);
-
-    let result = xview.div(0.5).unwrap();
+    let result = Tensor::new(vec![1.0, 2.0, 3.0], vec![3]).view().div(0.5).unwrap();
 
     assert_eq!(result.elements, vec![2.0, 4.0, 6.0]);
     assert_eq!(result.shape, vec![3]);
@@ -338,10 +317,7 @@ fn divide_by_decimal() {
 
 #[test]
 fn multiply_negative_values() {
-    let x = Tensor::new(vec![-1.0, -2.0, -3.0, 4.0], vec![2, 2]);
-    let xview = TensorView::new(&x);
-
-    let result = xview.mult(3.0).unwrap();
+    let result = Tensor::new(vec![-1.0, -2.0, -3.0, 4.0], vec![2, 2]).view().mult(3.0).unwrap();
 
     assert_eq!(result.elements, vec![-3.0, -6.0, -9.0, 12.0]);
     assert_eq!(result.shape, vec![2, 2]);
@@ -350,7 +326,7 @@ fn multiply_negative_values() {
 #[test]
 fn tensor_view_constructor() {
     let tensor = Tensor::new(vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0], vec![2, 3]);
-    let view = TensorView::new(&tensor);
+    let view = tensor.view();
 
     assert_eq!(view.shape, vec![2, 3]);
     assert_eq!(view.strides, vec![3, 1]);
@@ -361,7 +337,7 @@ fn tensor_view_constructor() {
 #[test]
 fn tensor_view_at_2d() {
     let tensor = Tensor::new(vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0], vec![2, 3]);
-    let view = TensorView::new(&tensor);
+    let view = tensor.view();
 
     let row0 = view.at(0).unwrap();
     assert_eq!(row0.shape, vec![3]);
@@ -377,7 +353,7 @@ fn tensor_view_at_2d() {
 #[test]
 fn tensor_view_at_3d() {
     let tensor = Tensor::new(vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0], vec![2, 2, 2]);
-    let view = TensorView::new(&tensor);
+    let view = tensor.view();
 
     let slice0 = view.at(0).unwrap();
     assert_eq!(slice0.shape, vec![2, 2]);
@@ -393,7 +369,7 @@ fn tensor_view_at_3d() {
 #[test]
 fn tensor_view_at_out_of_bounds() {
     let tensor = Tensor::new(vec![1.0, 2.0, 3.0], vec![3]);
-    let view = TensorView::new(&tensor);
+    let view = tensor.view();
 
     let result = view.at(3);
     assert!(result.is_err());
@@ -413,7 +389,7 @@ fn tensor_view_at_out_of_bounds() {
 #[test]
 fn tensor_view_get_1d() {
     let tensor = Tensor::new(vec![1.0, 2.0, 3.0], vec![3]);
-    let view = TensorView::new(&tensor);
+    let view = tensor.view();
 
     assert_eq!(view.get(&[0]).unwrap(), 1.0);
     assert_eq!(view.get(&[1]).unwrap(), 2.0);
@@ -423,7 +399,7 @@ fn tensor_view_get_1d() {
 #[test]
 fn tensor_view_get_2d() {
     let tensor = Tensor::new(vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0], vec![2, 3]);
-    let view = TensorView::new(&tensor);
+    let view = tensor.view();
 
     assert_eq!(view.get(&[0, 0]).unwrap(), 1.0);
     assert_eq!(view.get(&[0, 1]).unwrap(), 2.0);
@@ -436,7 +412,7 @@ fn tensor_view_get_2d() {
 #[test]
 fn tensor_view_get_3d() {
     let tensor = Tensor::new(vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0], vec![2, 2, 2]);
-    let view = TensorView::new(&tensor);
+    let view = tensor.view();
 
     assert_eq!(view.get(&[0, 0, 0]).unwrap(), 1.0);
     assert_eq!(view.get(&[0, 0, 1]).unwrap(), 2.0);
@@ -451,7 +427,7 @@ fn tensor_view_get_3d() {
 #[test]
 fn tensor_view_get_rank_mismatch() {
     let tensor = Tensor::new(vec![1.0, 2.0, 3.0, 4.0], vec![2, 2]);
-    let view = TensorView::new(&tensor);
+    let view = tensor.view();
 
     let result = view.get(&[0]);
     assert!(result.is_err());
@@ -473,7 +449,7 @@ fn tensor_view_get_rank_mismatch() {
 #[test]
 fn tensor_view_get_out_of_bounds() {
     let tensor = Tensor::new(vec![1.0, 2.0, 3.0, 4.0], vec![2, 2]);
-    let view = TensorView::new(&tensor);
+    let view = tensor.view();
 
     let result = view.get(&[2, 0]);
     assert!(result.is_err());
@@ -507,7 +483,7 @@ fn tensor_view_get_out_of_bounds() {
 #[test]
 fn tensor_view_get_single_element() {
     let tensor = Tensor::new(vec![42.0], vec![1]);
-    let view = TensorView::new(&tensor);
+    let view = tensor.view();
 
     assert_eq!(view.get(&[0]).unwrap(), 42.0);
 
@@ -519,8 +495,8 @@ fn tensor_view_get_single_element() {
 fn tensor_view_dot_product() {
     let tensor_a = Tensor::new(vec![1.0, 2.0, 3.0], vec![3]);
     let tensor_b = Tensor::new(vec![4.0, 5.0, 6.0], vec![3]);
-    let view_a = TensorView::new(&tensor_a);
-    let view_b = TensorView::new(&tensor_b);
+    let view_a = tensor_a.view();
+    let view_b = tensor_b.view();
 
     let result = view_a.dot(&view_b).unwrap();
     assert_eq!(result, 32.0); // 1*4 + 2*5 + 3*6 = 4 + 10 + 18 = 32
@@ -530,8 +506,8 @@ fn tensor_view_dot_product() {
 fn tensor_view_dot_product_rank_mismatch() {
     let tensor_1d = Tensor::new(vec![1.0, 2.0, 3.0], vec![3]);
     let tensor_2d = Tensor::new(vec![1.0, 2.0, 3.0, 4.0], vec![2, 2]);
-    let view_1d = TensorView::new(&tensor_1d);
-    let view_2d = TensorView::new(&tensor_2d);
+    let view_1d = tensor_1d.view();
+    let view_2d = tensor_2d.view();
 
     let result = view_1d.dot(&view_2d);
     assert!(result.is_err());
@@ -546,8 +522,8 @@ fn tensor_view_dot_product_rank_mismatch() {
 fn tensor_view_dot_product_shape_mismatch() {
     let tensor_a = Tensor::new(vec![1.0, 2.0, 3.0], vec![3]);
     let tensor_b = Tensor::new(vec![4.0, 5.0], vec![2]);
-    let view_a = TensorView::new(&tensor_a);
-    let view_b = TensorView::new(&tensor_b);
+    let view_a = tensor_a.view();
+    let view_b = tensor_b.view();
 
     let result = view_a.dot(&view_b);
     assert!(result.is_err());
@@ -562,7 +538,7 @@ fn tensor_view_dot_product_shape_mismatch() {
 #[test]
 fn tensor_view_column_extraction() {
     let tensor = Tensor::new(vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0], vec![2, 3]);
-    let view = TensorView::new(&tensor);
+    let view = tensor.view();
 
     let col0 = view.column(0).unwrap();
     assert_eq!(col0.shape, vec![2]);
@@ -583,7 +559,7 @@ fn tensor_view_column_extraction() {
 #[test]
 fn tensor_view_column_rank_mismatch() {
     let tensor = Tensor::new(vec![1.0, 2.0, 3.0], vec![3]);
-    let view = TensorView::new(&tensor);
+    let view = tensor.view();
 
     let result = view.column(0);
     assert!(result.is_err());
@@ -597,7 +573,7 @@ fn tensor_view_column_rank_mismatch() {
 #[test]
 fn tensor_view_column_out_of_bounds() {
     let tensor = Tensor::new(vec![1.0, 2.0, 3.0, 4.0], vec![2, 2]);
-    let view = TensorView::new(&tensor);
+    let view = tensor.view();
 
     let result = view.column(2);
     assert!(result.is_err());
@@ -612,7 +588,7 @@ fn tensor_view_column_out_of_bounds() {
 #[test]
 fn tensor_view_row_extraction() {
     let tensor = Tensor::new(vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0], vec![2, 3]);
-    let view = TensorView::new(&tensor);
+    let view = tensor.view();
 
     let row0 = view.row(0).unwrap();
     assert_eq!(row0.shape, vec![3]);
@@ -630,7 +606,7 @@ fn tensor_view_row_extraction() {
 #[test]
 fn tensor_view_row_rank_mismatch() {
     let tensor = Tensor::new(vec![1.0, 2.0, 3.0], vec![3]);
-    let view = TensorView::new(&tensor);
+    let view = tensor.view();
 
     let result = view.row(0);
     assert!(result.is_err());
@@ -644,7 +620,7 @@ fn tensor_view_row_rank_mismatch() {
 #[test]
 fn tensor_view_row_out_of_bounds() {
     let tensor = Tensor::new(vec![1.0, 2.0, 3.0, 4.0], vec![2, 2]);
-    let view = TensorView::new(&tensor);
+    let view = tensor.view();
 
     let result = view.row(2);
     assert!(result.is_err());
@@ -663,8 +639,8 @@ fn tensor_view_matmul() {
     // Create a 3x2 matrix: [[7, 8], [9, 10], [11, 12]]
     let tensor_b = Tensor::new(vec![7.0, 8.0, 9.0, 10.0, 11.0, 12.0], vec![3, 2]);
     
-    let view_a = TensorView::new(&tensor_a);
-    let view_b = TensorView::new(&tensor_b);
+    let view_a = tensor_a.view();
+    let view_b = tensor_b.view();
 
     let result = view_a.matmul(&view_b).unwrap();
     
@@ -685,7 +661,7 @@ fn tensor_view_matmul() {
 fn add_tensor_row_slices() {
     // Test adding row slices from the same tensor
     let tensor = Tensor::new(vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0], vec![2, 3]);
-    let view = TensorView::new(&tensor);
+    let view = tensor.view();
     
     let row0 = view.row(0).unwrap(); // [1.0, 2.0, 3.0]
     let row1 = view.row(1).unwrap(); // [4.0, 5.0, 6.0]
@@ -700,7 +676,7 @@ fn add_tensor_row_slices() {
 fn subtract_tensor_row_slices() {
     // Test subtracting row slices from the same tensor
     let tensor = Tensor::new(vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0], vec![2, 3]);
-    let view = TensorView::new(&tensor);
+    let view = tensor.view();
     
     let row0 = view.row(0).unwrap(); // [1.0, 2.0, 3.0]
     let row1 = view.row(1).unwrap(); // [4.0, 5.0, 6.0]
@@ -715,7 +691,7 @@ fn subtract_tensor_row_slices() {
 fn add_tensor_column_slices() {
     // Test adding column slices (non-contiguous views) - this will expose stride bugs
     let tensor = Tensor::new(vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0], vec![2, 3]);
-    let view = TensorView::new(&tensor);
+    let view = tensor.view();
     
     let col0 = view.column(0).unwrap(); // [1.0, 4.0] (non-contiguous)
     let col1 = view.column(1).unwrap(); // [2.0, 5.0] (non-contiguous)
@@ -730,7 +706,7 @@ fn add_tensor_column_slices() {
 fn subtract_tensor_column_slices() {
     // Test subtracting column slices (non-contiguous views)
     let tensor = Tensor::new(vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0], vec![2, 3]);
-    let view = TensorView::new(&tensor);
+    let view = tensor.view();
     
     let col0 = view.column(0).unwrap(); // [1.0, 4.0]
     let col2 = view.column(2).unwrap(); // [3.0, 6.0]
@@ -747,8 +723,8 @@ fn add_shape_mismatch_should_error() {
     let tensor_a = Tensor::new(vec![1.0, 2.0, 3.0], vec![3]);
     let tensor_b = Tensor::new(vec![1.0, 2.0], vec![2]);
     
-    let view_a = TensorView::new(&tensor_a);
-    let view_b = TensorView::new(&tensor_b);
+    let view_a = tensor_a.view();
+    let view_b = tensor_b.view();
     
     let result = view_a.add(&view_b);
     assert!(result.is_err()); // Should fail due to shape mismatch
@@ -760,8 +736,8 @@ fn subtract_shape_mismatch_should_error() {
     let tensor_2d = Tensor::new(vec![1.0, 2.0, 3.0, 4.0], vec![2, 2]);
     let tensor_1d = Tensor::new(vec![1.0, 2.0], vec![2]);
     
-    let view_2d = TensorView::new(&tensor_2d);
-    let view_1d = TensorView::new(&tensor_1d);
+    let view_2d = tensor_2d.view();
+    let view_1d = tensor_1d.view();
     
     let result = view_2d.sub(&view_1d);
     assert!(result.is_err()); // Should fail due to rank mismatch
@@ -771,7 +747,7 @@ fn subtract_shape_mismatch_should_error() {
 fn add_row_column_mismatch_should_error() {
     // Test mixing row and column operations with different shapes
     let tensor = Tensor::new(vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0], vec![2, 3]);
-    let view = TensorView::new(&tensor);
+    let view = tensor.view();
     
     let row = view.row(0).unwrap();    // shape: [3]
     let col = view.column(0).unwrap(); // shape: [2]
@@ -787,7 +763,7 @@ fn add_views_from_different_tensors() {
     let tensor_a = Tensor::new(vec![1.0, 2.0, 3.0], vec![3]);
     let tensor_b = Tensor::new(vec![10.0, 20.0, 30.0, 40.0, 50.0], vec![5]); // Different size storage
     
-    let view_a = TensorView::new(&tensor_a);
+    let view_a = tensor_a.view();
     let view_b_slice = tensor_b.elements.get(0..3).unwrap(); // Create view of first 3 elements
     
     let view_b = TensorView {
@@ -808,7 +784,7 @@ fn subtract_views_different_underlying_storage() {
     let small_tensor = Tensor::new(vec![5.0, 15.0], vec![2]);
     let large_tensor = Tensor::new(vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0], vec![4, 2]);
     
-    let small_view = TensorView::new(&small_tensor);
+    let small_view = small_tensor.view();
     let large_row = large_tensor.elements.get(2..4).unwrap(); // Elements [3.0, 4.0]
     
     let large_view = TensorView {
@@ -830,7 +806,7 @@ fn add_3d_tensor_slices() {
         vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0], 
         vec![2, 2, 2]
     );
-    let view = TensorView::new(&tensor);
+    let view = tensor.view();
     
     let slice0 = view.at(0).unwrap(); // First 2x2 slice: [[1,2], [3,4]]
     let slice1 = view.at(1).unwrap(); // Second 2x2 slice: [[5,6], [7,8]]
@@ -848,7 +824,7 @@ fn subtract_3d_tensor_slices() {
         vec![10.0, 20.0, 30.0, 40.0, 50.0, 60.0, 70.0, 80.0], 
         vec![2, 2, 2]
     );
-    let view = TensorView::new(&tensor);
+    let view = tensor.view();
     
     let slice1 = view.at(1).unwrap(); // Second slice: [[50,60], [70,80]]
     let slice0 = view.at(0).unwrap(); // First slice: [[10,20], [30,40]]
@@ -865,8 +841,8 @@ fn add_full_view_with_row_slice() {
     let tensor_full = Tensor::new(vec![1.0, 1.0, 1.0], vec![3]);
     let tensor_2d = Tensor::new(vec![10.0, 20.0, 30.0, 40.0, 50.0, 60.0], vec![2, 3]);
     
-    let full_view = TensorView::new(&tensor_full);
-    let view_2d = TensorView::new(&tensor_2d);
+    let full_view = tensor_full.view();
+    let view_2d = tensor_2d.view();
     let row_view = view_2d.row(1).unwrap(); // [40.0, 50.0, 60.0]
     
     let result = full_view.add(&row_view).unwrap();
@@ -881,8 +857,8 @@ fn subtract_column_from_full_view() {
     let tensor_vec = Tensor::new(vec![100.0, 200.0], vec![2]);
     let tensor_matrix = Tensor::new(vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0], vec![2, 3]);
     
-    let vec_view = TensorView::new(&tensor_vec);
-    let matrix_view = TensorView::new(&tensor_matrix);
+    let vec_view = tensor_vec.view();
+    let matrix_view = tensor_matrix.view();
     let col_view = matrix_view.column(1).unwrap(); // [2.0, 5.0]
     
     let result = vec_view.sub(&col_view).unwrap();
@@ -898,7 +874,7 @@ fn add_nested_slices() {
         vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0],
         vec![2, 3, 2]
     );
-    let view_3d = TensorView::new(&tensor_3d);
+    let view_3d = tensor_3d.view();
     
     let slice0 = view_3d.at(0).unwrap(); // First 3x2 slice
     let slice1 = view_3d.at(1).unwrap(); // Second 3x2 slice
@@ -914,80 +890,56 @@ fn add_nested_slices() {
 
 #[test]
 fn sum_vector() {
-    let tensor = Tensor::new(vec![1.0, 2.0, 3.0, 4.0], vec![4]);
-    let view = TensorView::new(&tensor);
-    
-    let result = view.sum().unwrap();
+    let result = Tensor::new(vec![1.0, 2.0, 3.0, 4.0], vec![4]).view().sum().unwrap();
     assert_eq!(result, 10.0); // 1 + 2 + 3 + 4 = 10
 }
 
 #[test]
 fn sum_matrix() {
-    let tensor = Tensor::new(vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0], vec![2, 3]);
-    let view = TensorView::new(&tensor);
-    
-    let result = view.sum().unwrap();
+    let result = Tensor::new(vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0], vec![2, 3]).view().sum().unwrap();
     assert_eq!(result, 21.0); // 1 + 2 + 3 + 4 + 5 + 6 = 21
 }
 
 #[test]
 fn sum_single_element() {
-    let tensor = Tensor::new(vec![42.0], vec![1]);
-    let view = TensorView::new(&tensor);
-    
-    let result = view.sum().unwrap();
+    let result = Tensor::new(vec![42.0], vec![1]).view().sum().unwrap();
     assert_eq!(result, 42.0);
 }
 
 #[test]
 fn sum_negative_values() {
-    let tensor = Tensor::new(vec![-1.0, 2.0, -3.0, 4.0], vec![4]);
-    let view = TensorView::new(&tensor);
-    
-    let result = view.sum().unwrap();
+    let result = Tensor::new(vec![-1.0, 2.0, -3.0, 4.0], vec![4]).view().sum().unwrap();
     assert_eq!(result, 2.0); // -1 + 2 + (-3) + 4 = 2
 }
 
 #[test]
 fn mean_vector() {
-    let tensor = Tensor::new(vec![2.0, 4.0, 6.0, 8.0], vec![4]);
-    let view = TensorView::new(&tensor);
-    
-    let result = view.mean().unwrap();
+    let result = Tensor::new(vec![2.0, 4.0, 6.0, 8.0], vec![4]).view().mean().unwrap();
     assert_eq!(result, 5.0); // (2 + 4 + 6 + 8) / 4 = 20 / 4 = 5
 }
 
 #[test]
 fn mean_matrix() {
-    let tensor = Tensor::new(vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0], vec![2, 3]);
-    let view = TensorView::new(&tensor);
-    
-    let result = view.mean().unwrap();
+    let result = Tensor::new(vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0], vec![2, 3]).view().mean().unwrap();
     assert_eq!(result, 3.5); // (1 + 2 + 3 + 4 + 5 + 6) / 6 = 21 / 6 = 3.5
 }
 
 #[test]
 fn mean_single_element() {
-    let tensor = Tensor::new(vec![7.5], vec![1]);
-    let view = TensorView::new(&tensor);
-    
-    let result = view.mean().unwrap();
+    let result = Tensor::new(vec![7.5], vec![1]).view().mean().unwrap();
     assert_eq!(result, 7.5);
 }
 
 #[test]
 fn mean_with_decimals() {
-    let tensor = Tensor::new(vec![1.5, 2.5, 3.0], vec![3]);
-    let view = TensorView::new(&tensor);
-    
-    let result = view.mean().unwrap();
+    let result = Tensor::new(vec![1.5, 2.5, 3.0], vec![3]).view().mean().unwrap();
     assert_eq!(result, 7.0 / 3.0); // (1.5 + 2.5 + 3.0) / 3 = 7.0 / 3
 }
 
 #[test]
 fn sum_row_slice() {
     let tensor = Tensor::new(vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0], vec![2, 3]);
-    let view = TensorView::new(&tensor);
+    let view = tensor.view();
     
     let row0 = view.row(0).unwrap(); // [1.0, 2.0, 3.0]
     let result = row0.sum().unwrap();
@@ -1001,7 +953,7 @@ fn sum_row_slice() {
 #[test]
 fn mean_row_slice() {
     let tensor = Tensor::new(vec![2.0, 4.0, 6.0, 8.0, 10.0, 12.0], vec![2, 3]);
-    let view = TensorView::new(&tensor);
+    let view = tensor.view();
     
     let row0 = view.row(0).unwrap(); // [2.0, 4.0, 6.0]
     let result = row0.mean().unwrap();
@@ -1015,7 +967,7 @@ fn mean_row_slice() {
 #[test]
 fn sum_row_slice_different_shapes() {
     let tensor = Tensor::new(vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0], vec![2, 4]);
-    let view = TensorView::new(&tensor);
+    let view = tensor.view();
     
     let row0 = view.row(0).unwrap(); // [1.0, 2.0, 3.0, 4.0]
     let result = row0.sum().unwrap();
@@ -1029,7 +981,7 @@ fn sum_row_slice_different_shapes() {
 #[test]
 fn sum_column_slice() {
     let tensor = Tensor::new(vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0], vec![2, 3]);
-    let view = TensorView::new(&tensor);
+    let view = tensor.view();
     
     let col0 = view.column(0).unwrap(); // [1.0, 4.0] (non-contiguous)
     let result = col0.sum().unwrap();
@@ -1047,7 +999,7 @@ fn sum_column_slice() {
 #[test]
 fn mean_column_slice() {
     let tensor = Tensor::new(vec![2.0, 4.0, 6.0, 8.0, 10.0, 12.0], vec![2, 3]);
-    let view = TensorView::new(&tensor);
+    let view = tensor.view();
     
     let col0 = view.column(0).unwrap(); // [2.0, 8.0] (non-contiguous)
     let result = col0.mean().unwrap();
@@ -1065,7 +1017,7 @@ fn sum_column_slice_larger_matrix() {
         5.0, 6.0, 7.0, 8.0,
         9.0, 10.0, 11.0, 12.0
     ], vec![3, 4]);
-    let view = TensorView::new(&tensor);
+    let view = tensor.view();
     
     let col1 = view.column(1).unwrap(); // [2.0, 6.0, 10.0] (stride = 4)
     let result = col1.sum().unwrap();
@@ -1082,7 +1034,7 @@ fn sum_3d_tensor_slice() {
         vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0],
         vec![2, 2, 2]
     );
-    let view = TensorView::new(&tensor);
+    let view = tensor.view();
     
     let slice0 = view.at(0).unwrap(); // First 2x2 slice: [[1,2], [3,4]]
     let result = slice0.sum().unwrap();
@@ -1099,7 +1051,7 @@ fn mean_3d_tensor_slice() {
         vec![2.0, 4.0, 6.0, 8.0, 10.0, 12.0, 14.0, 16.0],
         vec![2, 2, 2]
     );
-    let view = TensorView::new(&tensor);
+    let view = tensor.view();
     
     let slice0 = view.at(0).unwrap(); // First slice: [[2,4], [6,8]]
     let result = slice0.mean().unwrap();
@@ -1116,7 +1068,7 @@ fn sum_nested_3d_slices() {
         vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0],
         vec![2, 3, 2]
     );
-    let view = TensorView::new(&tensor);
+    let view = tensor.view();
     
     let slice0 = view.at(0).unwrap(); // First 3x2 slice
     let row_from_slice0 = slice0.at(1).unwrap(); // Second row: [3.0, 4.0]
@@ -1132,7 +1084,7 @@ fn sum_nested_3d_slices() {
 #[test]
 fn sum_zeros() {
     let tensor = Tensor::new(vec![0.0, 0.0, 0.0, 0.0], vec![2, 2]);
-    let view = TensorView::new(&tensor);
+    let view = tensor.view();
     
     let result = view.sum().unwrap();
     assert_eq!(result, 0.0);
@@ -1144,7 +1096,7 @@ fn sum_zeros() {
 #[test]
 fn sum_mean_mixed_signs() {
     let tensor = Tensor::new(vec![-5.0, 10.0, -3.0, 8.0], vec![4]);
-    let view = TensorView::new(&tensor);
+    let view = tensor.view();
     
     let result = view.sum().unwrap();
     assert_eq!(result, 10.0); // -5 + 10 + (-3) + 8 = 10
@@ -1156,7 +1108,7 @@ fn sum_mean_mixed_signs() {
 #[test]
 fn sum_mean_large_values() {
     let tensor = Tensor::new(vec![1000.0, 2000.0, 3000.0], vec![3]);
-    let view = TensorView::new(&tensor);
+    let view = tensor.view();
     
     let result = view.sum().unwrap();
     assert_eq!(result, 6000.0);
@@ -1168,7 +1120,7 @@ fn sum_mean_large_values() {
 #[test]
 fn sum_mean_fractional_values() {
     let tensor = Tensor::new(vec![0.1, 0.2, 0.3, 0.4], vec![2, 2]);
-    let view = TensorView::new(&tensor);
+    let view = tensor.view();
     
     let result = view.sum().unwrap();
     assert!((result - 1.0).abs() < 1e-6); // 0.1 + 0.2 + 0.3 + 0.4 = 1.0
