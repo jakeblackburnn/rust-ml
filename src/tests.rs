@@ -260,6 +260,94 @@ fn subtract_vector() {
 }
 
 #[test]
+fn multiply_vector() {
+    let x = Tensor::new(vec![1.0, 2.0, 3.0], vec![3]);
+    let xview = TensorView::new(&x);
+
+    let result = xview.mult(2.0).unwrap();
+
+    assert_eq!(result.elements, vec![2.0, 4.0, 6.0]);
+    assert_eq!(result.shape, vec![3]);
+}
+
+#[test]
+fn divide_vector() {
+    let x = Tensor::new(vec![2.0, 4.0, 6.0], vec![3]);
+    let xview = TensorView::new(&x);
+
+    let result = xview.div(2.0).unwrap();
+
+    assert_eq!(result.elements, vec![1.0, 2.0, 3.0]);
+    assert_eq!(result.shape, vec![3]);
+}
+
+#[test]
+fn multiply_matrix() {
+    let x = Tensor::new(vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0], vec![2, 3]);
+    let xview = TensorView::new(&x);
+
+    let result = xview.mult(3.0).unwrap();
+
+    assert_eq!(result.elements, vec![3.0, 6.0, 9.0, 12.0, 15.0, 18.0]);
+    assert_eq!(result.shape, vec![2, 3]);
+}
+
+#[test]
+fn divide_matrix() {
+    let x = Tensor::new(vec![4.0, 8.0, 12.0, 16.0], vec![2, 2]);
+    let xview = TensorView::new(&x);
+
+    let result = xview.div(4.0).unwrap();
+
+    assert_eq!(result.elements, vec![1.0, 2.0, 3.0, 4.0]);
+    assert_eq!(result.shape, vec![2, 2]);
+}
+
+#[test]
+fn multiply_by_zero() {
+    let x = Tensor::new(vec![1.0, 2.0, 3.0], vec![3]);
+    let xview = TensorView::new(&x);
+
+    let result = xview.mult(0.0).unwrap();
+
+    assert_eq!(result.elements, vec![0.0, 0.0, 0.0]);
+    assert_eq!(result.shape, vec![3]);
+}
+
+#[test]
+fn multiply_by_negative() {
+    let x = Tensor::new(vec![1.0, -2.0, 3.0], vec![3]);
+    let xview = TensorView::new(&x);
+
+    let result = xview.mult(-2.0).unwrap();
+
+    assert_eq!(result.elements, vec![-2.0, 4.0, -6.0]);
+    assert_eq!(result.shape, vec![3]);
+}
+
+#[test]
+fn divide_by_decimal() {
+    let x = Tensor::new(vec![1.0, 2.0, 3.0], vec![3]);
+    let xview = TensorView::new(&x);
+
+    let result = xview.div(0.5).unwrap();
+
+    assert_eq!(result.elements, vec![2.0, 4.0, 6.0]);
+    assert_eq!(result.shape, vec![3]);
+}
+
+#[test]
+fn multiply_negative_values() {
+    let x = Tensor::new(vec![-1.0, -2.0, -3.0, 4.0], vec![2, 2]);
+    let xview = TensorView::new(&x);
+
+    let result = xview.mult(3.0).unwrap();
+
+    assert_eq!(result.elements, vec![-3.0, -6.0, -9.0, 12.0]);
+    assert_eq!(result.shape, vec![2, 2]);
+}
+
+#[test]
 fn tensor_view_constructor() {
     let tensor = Tensor::new(vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0], vec![2, 3]);
     let view = TensorView::new(&tensor);
@@ -822,4 +910,269 @@ fn add_nested_slices() {
     
     assert_eq!(result.shape, vec![2]);
     assert_eq!(result.elements, vec![10.0, 12.0]); // [3+7, 4+8]
+}
+
+#[test]
+fn sum_vector() {
+    let tensor = Tensor::new(vec![1.0, 2.0, 3.0, 4.0], vec![4]);
+    let view = TensorView::new(&tensor);
+    
+    let result = view.sum().unwrap();
+    assert_eq!(result, 10.0); // 1 + 2 + 3 + 4 = 10
+}
+
+#[test]
+fn sum_matrix() {
+    let tensor = Tensor::new(vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0], vec![2, 3]);
+    let view = TensorView::new(&tensor);
+    
+    let result = view.sum().unwrap();
+    assert_eq!(result, 21.0); // 1 + 2 + 3 + 4 + 5 + 6 = 21
+}
+
+#[test]
+fn sum_single_element() {
+    let tensor = Tensor::new(vec![42.0], vec![1]);
+    let view = TensorView::new(&tensor);
+    
+    let result = view.sum().unwrap();
+    assert_eq!(result, 42.0);
+}
+
+#[test]
+fn sum_negative_values() {
+    let tensor = Tensor::new(vec![-1.0, 2.0, -3.0, 4.0], vec![4]);
+    let view = TensorView::new(&tensor);
+    
+    let result = view.sum().unwrap();
+    assert_eq!(result, 2.0); // -1 + 2 + (-3) + 4 = 2
+}
+
+#[test]
+fn mean_vector() {
+    let tensor = Tensor::new(vec![2.0, 4.0, 6.0, 8.0], vec![4]);
+    let view = TensorView::new(&tensor);
+    
+    let result = view.mean().unwrap();
+    assert_eq!(result, 5.0); // (2 + 4 + 6 + 8) / 4 = 20 / 4 = 5
+}
+
+#[test]
+fn mean_matrix() {
+    let tensor = Tensor::new(vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0], vec![2, 3]);
+    let view = TensorView::new(&tensor);
+    
+    let result = view.mean().unwrap();
+    assert_eq!(result, 3.5); // (1 + 2 + 3 + 4 + 5 + 6) / 6 = 21 / 6 = 3.5
+}
+
+#[test]
+fn mean_single_element() {
+    let tensor = Tensor::new(vec![7.5], vec![1]);
+    let view = TensorView::new(&tensor);
+    
+    let result = view.mean().unwrap();
+    assert_eq!(result, 7.5);
+}
+
+#[test]
+fn mean_with_decimals() {
+    let tensor = Tensor::new(vec![1.5, 2.5, 3.0], vec![3]);
+    let view = TensorView::new(&tensor);
+    
+    let result = view.mean().unwrap();
+    assert_eq!(result, 7.0 / 3.0); // (1.5 + 2.5 + 3.0) / 3 = 7.0 / 3
+}
+
+#[test]
+fn sum_row_slice() {
+    let tensor = Tensor::new(vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0], vec![2, 3]);
+    let view = TensorView::new(&tensor);
+    
+    let row0 = view.row(0).unwrap(); // [1.0, 2.0, 3.0]
+    let result = row0.sum().unwrap();
+    assert_eq!(result, 6.0); // 1 + 2 + 3 = 6
+    
+    let row1 = view.row(1).unwrap(); // [4.0, 5.0, 6.0]
+    let result = row1.sum().unwrap();
+    assert_eq!(result, 15.0); // 4 + 5 + 6 = 15
+}
+
+#[test]
+fn mean_row_slice() {
+    let tensor = Tensor::new(vec![2.0, 4.0, 6.0, 8.0, 10.0, 12.0], vec![2, 3]);
+    let view = TensorView::new(&tensor);
+    
+    let row0 = view.row(0).unwrap(); // [2.0, 4.0, 6.0]
+    let result = row0.mean().unwrap();
+    assert_eq!(result, 4.0); // (2 + 4 + 6) / 3 = 12 / 3 = 4
+    
+    let row1 = view.row(1).unwrap(); // [8.0, 10.0, 12.0]
+    let result = row1.mean().unwrap();
+    assert_eq!(result, 10.0); // (8 + 10 + 12) / 3 = 30 / 3 = 10
+}
+
+#[test]
+fn sum_row_slice_different_shapes() {
+    let tensor = Tensor::new(vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0], vec![2, 4]);
+    let view = TensorView::new(&tensor);
+    
+    let row0 = view.row(0).unwrap(); // [1.0, 2.0, 3.0, 4.0]
+    let result = row0.sum().unwrap();
+    assert_eq!(result, 10.0); // 1 + 2 + 3 + 4 = 10
+    
+    let row1 = view.row(1).unwrap(); // [5.0, 6.0, 7.0, 8.0]
+    let result = row1.sum().unwrap();
+    assert_eq!(result, 26.0); // 5 + 6 + 7 + 8 = 26
+}
+
+#[test]
+fn sum_column_slice() {
+    let tensor = Tensor::new(vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0], vec![2, 3]);
+    let view = TensorView::new(&tensor);
+    
+    let col0 = view.column(0).unwrap(); // [1.0, 4.0] (non-contiguous)
+    let result = col0.sum().unwrap();
+    assert_eq!(result, 5.0); // 1 + 4 = 5
+    
+    let col1 = view.column(1).unwrap(); // [2.0, 5.0] (non-contiguous)
+    let result = col1.sum().unwrap();
+    assert_eq!(result, 7.0); // 2 + 5 = 7
+    
+    let col2 = view.column(2).unwrap(); // [3.0, 6.0] (non-contiguous)
+    let result = col2.sum().unwrap();
+    assert_eq!(result, 9.0); // 3 + 6 = 9
+}
+
+#[test]
+fn mean_column_slice() {
+    let tensor = Tensor::new(vec![2.0, 4.0, 6.0, 8.0, 10.0, 12.0], vec![2, 3]);
+    let view = TensorView::new(&tensor);
+    
+    let col0 = view.column(0).unwrap(); // [2.0, 8.0] (non-contiguous)
+    let result = col0.mean().unwrap();
+    assert_eq!(result, 5.0); // (2 + 8) / 2 = 10 / 2 = 5
+    
+    let col2 = view.column(2).unwrap(); // [6.0, 12.0] (non-contiguous)
+    let result = col2.mean().unwrap();
+    assert_eq!(result, 9.0); // (6 + 12) / 2 = 18 / 2 = 9
+}
+
+#[test]
+fn sum_column_slice_larger_matrix() {
+    let tensor = Tensor::new(vec![
+        1.0, 2.0, 3.0, 4.0,
+        5.0, 6.0, 7.0, 8.0,
+        9.0, 10.0, 11.0, 12.0
+    ], vec![3, 4]);
+    let view = TensorView::new(&tensor);
+    
+    let col1 = view.column(1).unwrap(); // [2.0, 6.0, 10.0] (stride = 4)
+    let result = col1.sum().unwrap();
+    assert_eq!(result, 18.0); // 2 + 6 + 10 = 18
+    
+    let col3 = view.column(3).unwrap(); // [4.0, 8.0, 12.0] (stride = 4)
+    let result = col3.sum().unwrap();
+    assert_eq!(result, 24.0); // 4 + 8 + 12 = 24
+}
+
+#[test]
+fn sum_3d_tensor_slice() {
+    let tensor = Tensor::new(
+        vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0],
+        vec![2, 2, 2]
+    );
+    let view = TensorView::new(&tensor);
+    
+    let slice0 = view.at(0).unwrap(); // First 2x2 slice: [[1,2], [3,4]]
+    let result = slice0.sum().unwrap();
+    assert_eq!(result, 10.0); // 1 + 2 + 3 + 4 = 10
+    
+    let slice1 = view.at(1).unwrap(); // Second 2x2 slice: [[5,6], [7,8]]
+    let result = slice1.sum().unwrap();
+    assert_eq!(result, 26.0); // 5 + 6 + 7 + 8 = 26
+}
+
+#[test]
+fn mean_3d_tensor_slice() {
+    let tensor = Tensor::new(
+        vec![2.0, 4.0, 6.0, 8.0, 10.0, 12.0, 14.0, 16.0],
+        vec![2, 2, 2]
+    );
+    let view = TensorView::new(&tensor);
+    
+    let slice0 = view.at(0).unwrap(); // First slice: [[2,4], [6,8]]
+    let result = slice0.mean().unwrap();
+    assert_eq!(result, 5.0); // (2 + 4 + 6 + 8) / 4 = 20 / 4 = 5
+    
+    let slice1 = view.at(1).unwrap(); // Second slice: [[10,12], [14,16]]
+    let result = slice1.mean().unwrap();
+    assert_eq!(result, 13.0); // (10 + 12 + 14 + 16) / 4 = 52 / 4 = 13
+}
+
+#[test]
+fn sum_nested_3d_slices() {
+    let tensor = Tensor::new(
+        vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0],
+        vec![2, 3, 2]
+    );
+    let view = TensorView::new(&tensor);
+    
+    let slice0 = view.at(0).unwrap(); // First 3x2 slice
+    let row_from_slice0 = slice0.at(1).unwrap(); // Second row: [3.0, 4.0]
+    let result = row_from_slice0.sum().unwrap();
+    assert_eq!(result, 7.0); // 3 + 4 = 7
+    
+    let slice1 = view.at(1).unwrap(); // Second 3x2 slice  
+    let row_from_slice1 = slice1.at(2).unwrap(); // Third row: [11.0, 12.0]
+    let result = row_from_slice1.sum().unwrap();
+    assert_eq!(result, 23.0); // 11 + 12 = 23
+}
+
+#[test]
+fn sum_zeros() {
+    let tensor = Tensor::new(vec![0.0, 0.0, 0.0, 0.0], vec![2, 2]);
+    let view = TensorView::new(&tensor);
+    
+    let result = view.sum().unwrap();
+    assert_eq!(result, 0.0);
+    
+    let result = view.mean().unwrap();
+    assert_eq!(result, 0.0);
+}
+
+#[test]
+fn sum_mean_mixed_signs() {
+    let tensor = Tensor::new(vec![-5.0, 10.0, -3.0, 8.0], vec![4]);
+    let view = TensorView::new(&tensor);
+    
+    let result = view.sum().unwrap();
+    assert_eq!(result, 10.0); // -5 + 10 + (-3) + 8 = 10
+    
+    let result = view.mean().unwrap();
+    assert_eq!(result, 2.5); // 10 / 4 = 2.5
+}
+
+#[test]
+fn sum_mean_large_values() {
+    let tensor = Tensor::new(vec![1000.0, 2000.0, 3000.0], vec![3]);
+    let view = TensorView::new(&tensor);
+    
+    let result = view.sum().unwrap();
+    assert_eq!(result, 6000.0);
+    
+    let result = view.mean().unwrap();
+    assert_eq!(result, 2000.0); // 6000 / 3 = 2000
+}
+
+#[test]
+fn sum_mean_fractional_values() {
+    let tensor = Tensor::new(vec![0.1, 0.2, 0.3, 0.4], vec![2, 2]);
+    let view = TensorView::new(&tensor);
+    
+    let result = view.sum().unwrap();
+    assert!((result - 1.0).abs() < 1e-6); // 0.1 + 0.2 + 0.3 + 0.4 = 1.0
+    
+    let result = view.mean().unwrap();
+    assert!((result - 0.25).abs() < 1e-6); // 1.0 / 4 = 0.25
 }

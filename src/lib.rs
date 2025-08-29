@@ -117,12 +117,12 @@ impl<'a> TensorView<'a> {
             results[i] = self_elem + other_elem;
 
             // increment coords
-            for i in ( 0..coords.len() ).rev() {
-                coords[i] += 1;
-                if coords[i] < self.shape[i] {
+            for j in ( 0..coords.len() ).rev() {
+                coords[j] += 1;
+                if coords[j] < self.shape[j] {
                     break;
                 }
-                coords[i] = 0;
+                coords[j] = 0;
             }
         }
 
@@ -144,18 +144,96 @@ impl<'a> TensorView<'a> {
             results[i] = self_elem - other_elem;
 
             // increment coords
-            for i in ( 0..coords.len() ).rev() {
-                coords[i] += 1;
-                if coords[i] < self.shape[i] {
+            for j in ( 0..coords.len() ).rev() {
+                coords[j] += 1;
+                if coords[j] < self.shape[j] {
                     break;
                 }
-                coords[i] = 0;
+                coords[j] = 0;
             }
         }
 
 
         Ok( Tensor::new(results, self.shape.clone()))
     }
+
+    pub fn mult(&self, factor: f32) -> Result<Tensor, TensorError> {
+        let len = self.shape.iter().product();
+        let mut results = vec![0.0; len];
+
+        let mut coords = vec![0; self.shape.len()];
+
+        for i in 0..len {
+            let elem = self.get(&coords)?;
+            results[i] = elem * factor;
+
+            // increment coords
+            for j in ( 0..coords.len() ).rev() {
+                coords[j] += 1;
+                if coords[j] < self.shape[j] {
+                    break;
+                }
+                coords[j] = 0;
+            }
+        }
+
+        Ok( Tensor::new(results, self.shape.clone()) )
+    }
+    pub fn div(&self, denominator: f32) -> Result<Tensor, TensorError> {
+        let len = self.shape.iter().product();
+        let mut results = vec![0.0; len];
+
+        let mut coords = vec![0; self.shape.len()];
+
+        for i in 0..len {
+            let elem = self.get(&coords)?;
+            results[i] = elem / denominator;
+
+            // increment coords
+            for j in ( 0..coords.len() ).rev() {
+                coords[j] += 1;
+                if coords[j] < self.shape[j] {
+                    break;
+                }
+                coords[j] = 0;
+            }
+        }
+
+        Ok( Tensor::new(results, self.shape.clone()) )
+    }
+
+
+    pub fn sum(&self) -> Result<f32, TensorError> {
+        let len = self.shape.iter().product();
+
+        let mut result = 0.0;
+        let mut coords = vec![0; self.shape.len()];
+
+        for _i in 0..len {
+            let elem = self.get(&coords)?;
+            result += elem;
+
+            // increment coords
+            for j in ( 0..coords.len() ).rev() {
+                coords[j] += 1;
+                if coords[j] < self.shape[j] {
+                    break;
+                }
+                coords[j] = 0;
+            }
+        }
+
+        Ok(result)
+    }
+
+
+    pub fn mean(&self) -> Result<f32, TensorError> {
+        let sum = self.sum()?;
+        let len: usize = self.shape.iter().product();
+        let mean = sum / (len as f32);
+        Ok(mean)
+    }
+ 
 
     pub fn transpose(&self) -> Result<Tensor, TensorError> {
         if self.shape.len() != 2 {
