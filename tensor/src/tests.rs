@@ -1128,3 +1128,75 @@ fn sum_mean_fractional_values() {
     let result = view.mean().unwrap();
     assert!((result - 0.25).abs() < 1e-6); // 1.0 / 4 = 0.25
 }
+
+#[test]
+fn zeroes_1d() {
+    let tensor = Tensor::zeroes(vec![3]);
+    assert_eq!(tensor.shape, vec![3]);
+    assert_eq!(tensor.elements, vec![0.0, 0.0, 0.0]);
+}
+
+#[test]
+fn zeroes_2d() {
+    let tensor = Tensor::zeroes(vec![2, 3]);
+    assert_eq!(tensor.shape, vec![2, 3]);
+    assert_eq!(tensor.elements, vec![0.0, 0.0, 0.0, 0.0, 0.0, 0.0]);
+}
+
+#[test]
+fn zeroes_3d() {
+    let tensor = Tensor::zeroes(vec![2, 2, 2]);
+    assert_eq!(tensor.shape, vec![2, 2, 2]);
+    assert_eq!(tensor.elements, vec![0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]);
+}
+
+#[test]
+fn zeroes_single_element() {
+    let tensor = Tensor::zeroes(vec![1]);
+    assert_eq!(tensor.shape, vec![1]);
+    assert_eq!(tensor.elements, vec![0.0]);
+}
+
+#[test]
+fn zeroes_large_tensor() {
+    let tensor = Tensor::zeroes(vec![5, 4]);
+    assert_eq!(tensor.shape, vec![5, 4]);
+    assert_eq!(tensor.elements.len(), 20);
+    assert!(tensor.elements.iter().all(|&x| x == 0.0));
+}
+
+#[test]
+fn ones_1d() {
+    let tensor = Tensor::ones(vec![3]);
+    assert_eq!(tensor.shape, vec![3]);
+    assert_eq!(tensor.elements, vec![1.0, 1.0, 1.0]);
+}
+
+#[test]
+fn ones_2d() {
+    let tensor = Tensor::ones(vec![2, 3]);
+    assert_eq!(tensor.shape, vec![2, 3]);
+    assert_eq!(tensor.elements, vec![1.0, 1.0, 1.0, 1.0, 1.0, 1.0]);
+}
+
+#[test]
+fn ones_3d() {
+    let tensor = Tensor::ones(vec![2, 2, 2]);
+    assert_eq!(tensor.shape, vec![2, 2, 2]);
+    assert_eq!(tensor.elements, vec![1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]);
+}
+
+#[test]
+fn ones_single_element() {
+    let tensor = Tensor::ones(vec![1]);
+    assert_eq!(tensor.shape, vec![1]);
+    assert_eq!(tensor.elements, vec![1.0]);
+}
+
+#[test]
+fn ones_large_tensor() {
+    let tensor = Tensor::ones(vec![5, 4]);
+    assert_eq!(tensor.shape, vec![5, 4]);
+    assert_eq!(tensor.elements.len(), 20);
+    assert!(tensor.elements.iter().all(|&x| x == 1.0));
+}

@@ -2,6 +2,9 @@ mod tests;
 mod error;
 use error::TensorError;
 
+use rand::prelude::*;
+use rand_distr::Normal;
+
 pub struct Tensor {
     elements: Vec<f32>,
     pub shape: Vec<usize>,
@@ -9,6 +12,34 @@ pub struct Tensor {
 
 impl Tensor {
     pub fn new(elements: Vec<f32>, shape: Vec<usize>) -> Self {
+        Tensor { elements, shape }
+    }
+
+    pub fn zeroes(shape: Vec<usize>) -> Self {
+        let len = shape.iter().product();
+        let elements = vec![0.0; len];
+
+        Tensor { elements, shape }
+    }
+
+    pub fn ones(shape: Vec<usize>) -> Self {
+        let len = shape.iter().product();
+        let elements = vec![1.0; len];
+
+        Tensor { elements, shape }
+    }
+
+    pub fn random_normal(shape: Vec<usize>, mean: f32, std_dev: f32) -> Self {
+        let len = shape.iter().product();
+        let mut elements = vec![0.0; len];
+
+        let normal = Normal::new(mean, std_dev).unwrap();
+        let mut rng = thread_rng();
+
+        for i in 0..len {
+            elements[i] = rng.sample(normal);
+        }
+
         Tensor { elements, shape }
     }
 
