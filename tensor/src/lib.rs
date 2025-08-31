@@ -2,6 +2,7 @@ mod tests;
 mod error;
 use error::TensorError;
 
+use std::fs;
 use rand::prelude::*;
 use rand_distr::Normal;
 
@@ -41,6 +42,36 @@ impl Tensor {
         }
 
         Tensor { elements, shape }
+    }
+
+    pub fn from(file_path: &str) -> Self {
+        // TODO: Add error handling for file not found
+        let content = fs::read_to_string(file_path).unwrap();
+        
+        let lines: Vec<&str> = content.trim().split('\n').collect();
+        // TODO: Add error handling for empty file
+        let rows = lines.len();
+        
+        // Parse first line to determine columns
+        let first_line_values: Vec<&str> = lines[0].split_whitespace().collect();
+        let cols = first_line_values.len();
+        
+        let mut elements = Vec::new();
+        
+        for line in lines {
+            let values: Vec<&str> = line.split_whitespace().collect();
+            // TODO: Add error handling for inconsistent row lengths
+            for value_str in values {
+                // TODO: Add error handling for parse failures
+                let value: f32 = value_str.parse().unwrap();
+                elements.push(value);
+            }
+        }
+        
+        Tensor {
+            elements,
+            shape: vec![rows, cols],
+        }
     }
 
     pub fn view(&self) -> TensorView {
