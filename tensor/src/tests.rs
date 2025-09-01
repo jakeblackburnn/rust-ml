@@ -230,6 +230,23 @@ fn transpose_repeated_elements() {
     assert_eq!(yview.shape, vec![3, 2]);
 }
 
+#[test]
+fn transpose_not_matrix() {
+    let tensor = Tensor::new(vec![1.0, 2.0, 3.0], vec![3]);
+    let view = tensor.view();
+    
+    let result = view.transpose();
+    assert!(result.is_err());
+    
+    if let Err(TensorError::NotMatrixError(rank)) = result {
+        assert_eq!(rank, 1);
+        
+        let error_message = format!("{}", TensorError::NotMatrixError(rank));
+        assert_eq!(error_message, "Expected Matrix, found rank 1 tensor.");
+    } else {
+        panic!("Expected NotMatrixError");
+    }
+}
 
 #[test]
 fn add_vector() {
@@ -257,6 +274,50 @@ fn subtract_vector() {
 
     assert_eq!(result.elements, vec![0.0, -2.0, -4.0]);
     assert_eq!(result.shape, vec![3]);
+}
+
+#[test]
+fn add_shape_mismatch() {
+    let tensor_a = Tensor::new(vec![1.0, 2.0, 3.0], vec![3]);
+    let tensor_b = Tensor::new(vec![1.0, 2.0], vec![2]);
+    
+    let view_a = tensor_a.view();
+    let view_b = tensor_b.view();
+    
+    let result = view_a.add(&view_b);
+    assert!(result.is_err());
+    
+    if let Err(TensorError::ShapeMismatch { provided, expected }) = result {
+        assert_eq!(provided, vec![2]);
+        assert_eq!(expected, vec![3]);
+        
+        let error_message = format!("{}", TensorError::ShapeMismatch { provided, expected });
+        assert_eq!(error_message, "Tensor shapes did not match. found (other.shape): [2], expected (self.shape): [3]");
+    } else {
+        panic!("Expected ShapeMismatch error");
+    }
+}
+
+#[test]
+fn sub_shape_mismatch() {
+    let tensor_a = Tensor::new(vec![1.0, 2.0, 3.0, 4.0], vec![2, 2]);
+    let tensor_b = Tensor::new(vec![1.0, 2.0, 3.0], vec![3]);
+    
+    let view_a = tensor_a.view();
+    let view_b = tensor_b.view();
+    
+    let result = view_a.sub(&view_b);
+    assert!(result.is_err());
+    
+    if let Err(TensorError::ShapeMismatch { provided, expected }) = result {
+        assert_eq!(provided, vec![3]);
+        assert_eq!(expected, vec![2, 2]);
+        
+        let error_message = format!("{}", TensorError::ShapeMismatch { provided, expected });
+        assert_eq!(error_message, "Tensor shapes did not match. found (other.shape): [3], expected (self.shape): [2, 2]");
+    } else {
+        panic!("Expected ShapeMismatch error");
+    }
 }
 
 #[test]
@@ -536,6 +597,49 @@ fn tensor_view_dot_product_shape_mismatch() {
 }
 
 #[test]
+fn dot_shape_mismatch() {
+    let tensor_a = Tensor::new(vec![1.0, 2.0, 3.0], vec![3]);
+    let tensor_b = Tensor::new(vec![1.0, 2.0], vec![2]);
+    
+    let view_a = tensor_a.view();
+    let view_b = tensor_b.view();
+    
+    let result = view_a.dot(&view_b);
+    assert!(result.is_err());
+    
+    if let Err(TensorError::ShapeMismatch { provided, expected }) = result {
+        assert_eq!(provided, vec![2]);
+        assert_eq!(expected, vec![3]);
+        
+        let error_message = format!("{}", TensorError::ShapeMismatch { provided, expected });
+        assert_eq!(error_message, "Tensor shapes did not match. found (other.shape): [2], expected (self.shape): [3]");
+    } else {
+        panic!("Expected ShapeMismatch error");
+    }
+}
+
+#[test]
+fn dot_not_vector() {
+    let tensor_a = Tensor::new(vec![1.0, 2.0, 3.0, 4.0], vec![2, 2]);
+    let tensor_b = Tensor::new(vec![1.0, 2.0], vec![2]);
+    
+    let view_a = tensor_a.view();
+    let view_b = tensor_b.view();
+    
+    let result = view_a.dot(&view_b);
+    assert!(result.is_err());
+    
+    if let Err(TensorError::NotVectorError(rank)) = result {
+        assert_eq!(rank, 2);
+        
+        let error_message = format!("{}", TensorError::NotVectorError(rank));
+        assert_eq!(error_message, "Expected Vector, found rank 2 tensor.");
+    } else {
+        panic!("Expected NotVectorError");
+    }
+}
+
+#[test]
 fn tensor_view_column_extraction() {
     let tensor = Tensor::new(vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0], vec![2, 3]);
     let view = tensor.view();
@@ -653,6 +757,49 @@ fn tensor_view_matmul() {
     assert_eq!(result.get_nd(&[0, 1]).unwrap(), 64.0);
     assert_eq!(result.get_nd(&[1, 0]).unwrap(), 139.0);
     assert_eq!(result.get_nd(&[1, 1]).unwrap(), 154.0);
+}
+
+#[test]
+fn matmul_not_matrix() {
+    let tensor_a = Tensor::new(vec![1.0, 2.0, 3.0], vec![3]);
+    let tensor_b = Tensor::new(vec![1.0, 2.0, 3.0, 4.0], vec![2, 2]);
+    
+    let view_a = tensor_a.view();
+    let view_b = tensor_b.view();
+    
+    let result = view_a.matmul(&view_b);
+    assert!(result.is_err());
+    
+    if let Err(TensorError::NotMatrixError(rank)) = result {
+        assert_eq!(rank, 1);
+        
+        let error_message = format!("{}", TensorError::NotMatrixError(rank));
+        assert_eq!(error_message, "Expected Matrix, found rank 1 tensor.");
+    } else {
+        panic!("Expected NotMatrixError");
+    }
+}
+
+#[test]
+fn matmul_incompatible_dimensions() {
+    let tensor_a = Tensor::new(vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0], vec![2, 3]);
+    let tensor_b = Tensor::new(vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0], vec![2, 4]);
+    
+    let view_a = tensor_a.view();
+    let view_b = tensor_b.view();
+    
+    let result = view_a.matmul(&view_b);
+    assert!(result.is_err());
+    
+    if let Err(TensorError::IncompatibleDimensions { k1, k2 }) = result {
+        assert_eq!(k1, 3);
+        assert_eq!(k2, 2);
+        
+        let error_message = format!("{}", TensorError::IncompatibleDimensions { k1, k2 });
+        assert_eq!(error_message, "Incompatible inner dimentions: k1 (self.shape[1]): 3, k2 (other.shape[0]): 2");
+    } else {
+        panic!("Expected IncompatibleDimensions error");
+    }
 }
 
 // Test cases for complex TensorView scenarios in add/subtract operations
