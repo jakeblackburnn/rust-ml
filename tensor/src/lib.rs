@@ -170,8 +170,11 @@ impl<'a> TensorView<'a> {
 
     pub fn add(&self, other: &TensorView) -> Result<Tensor, TensorError> {
         if self.shape != other.shape {
-            // return error
-        }
+            return Err( TensorError::ShapeMismatch {
+                provided: other.shape.clone(),
+                expected: self.shape.clone(),
+            });
+       }
 
         let len = self.shape.iter().product();
         let mut results = vec![0.0; len];
@@ -197,7 +200,10 @@ impl<'a> TensorView<'a> {
 
     pub fn sub(&self, other: &TensorView) -> Result<Tensor, TensorError> {
         if self.shape != other.shape {
-            // return error
+            return Err( TensorError::ShapeMismatch {
+                provided: other.shape.clone(),
+                expected: self.shape.clone(),
+            });
         }
 
         let len = self.shape.iter().product();
@@ -303,7 +309,7 @@ impl<'a> TensorView<'a> {
 
     pub fn transpose(&self) -> Result<Tensor, TensorError> {
         if self.shape.len() != 2 {
-            // return error
+            return Err( TensorError::NotMatrixError(self.shape.len()) );
         }
 
         let (m, n) = ( self.shape[0], self.shape[1] );
@@ -323,15 +329,16 @@ impl<'a> TensorView<'a> {
     }
 
     pub fn dot(&self, other: &TensorView) -> Result<f32, TensorError> {
-        if self.shape.len() != 1 || other.shape.len() != 1 {
-            return Err(TensorError::RankMismatch { 
-                provided: if self.shape.len() != 1 { self.shape.len() } else { other.shape.len() }, 
-                expected: 1 
-            });
+
+        if self.shape.len() != 1 {
+            return Err( TensorError::NotVectorError(self.shape.len()) );
         }
         
-        if self.shape[0] != other.shape[0] {
-            // return vec length mismatch error
+        if self.shape != other.shape {
+            return Err( TensorError::ShapeMismatch {
+                provided: other.shape.clone(),
+                expected: self.shape.clone(),
+            });
         }
         
         let mut sum = 0.0;
@@ -346,17 +353,20 @@ impl<'a> TensorView<'a> {
 
     pub fn matmul(&self, other: &TensorView) -> Result<Tensor, TensorError> {
         if self.shape.len() != 2 || other.shape.len() != 2 {
-            return Err(TensorError::RankMismatch { 
-                provided: if self.shape.len() != 2 { self.shape.len() } else { other.shape.len() }, 
-                expected: 2 
-            });
+            return Err( TensorError::NotMatrixError( 
+                if self.shape.len() != 2 { self.shape.len() }
+                else { other.shape.len() }
+            ));
         }
         
         let (m, k1) = (self.shape[0], self.shape[1]);
         let (k2, n) = (other.shape[0], other.shape[1]);
         
         if k1 != k2 {
-            // return inner dim mismatch error
+            return Err( TensorError::IncompatibleDimensions {
+                k1: k1,
+                k2: k2,
+            });
         }
 
         let mut result = vec![0.0; m * n];
