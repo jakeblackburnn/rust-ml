@@ -8,7 +8,7 @@ A Rust library implementing tensor operations and linear algebra for machine lea
 - **Tensor Constructors**: Convenient creation methods (`zeroes`, `ones`, `random_normal`)
 - **Matrix Operations**: Matrix multiplication, dot products, element-wise arithmetic (add/subtract), row/column slicing  
 - **TensorView System**: Zero-copy tensor views with stride-based memory layout
-- **Errors**: Comprehensive error handling with custom error types
+- **Comprehensive Error Handling**: Robust error handling with specific error types for shape mismatches, dimension incompatibilities, and invalid operations
 
 ## Current Implementation
 
@@ -17,9 +17,9 @@ The library currently provides:
 - `Tensor`: Core tensor structure with `Vec<f32>` storage and shape information
 - Tensor constructors: `zeroes()`, `ones()`, `random_normal()` for convenient tensor creation
 - `TensorView`: Memory-efficient views for sub-tensor operations without data copying
-- Matrix operations: `matmul()`, `dot()`, `add()`, `sub()`, `mult()`, `div()`, `transpose()`, `sum()`, `mean()`, `row()`, `column()`
+- Matrix operations: `matmul()`, `dot()`, `add()`, `sub()`, `mult()`, `div()`, `transpose()`, `sum()`, `mean()`, `square()`, `mse()`, `row()`, `column()`, `slice()`
 - N-dimensional indexing with bounds checking
-- Custom error types for dimension mismatches and out-of-bounds access
+- Custom error types for shape mismatches, dimension incompatibilities, and invalid operations
 
 ## Installation
 
@@ -74,6 +74,28 @@ let sum = view_x.add(&view_y)?;
 
 // Subtraction: [4.0, 5.0, 6.0] - [1.0, 2.0, 3.0] = [3.0, 3.0, 3.0]
 let diff = view_y.sub(&view_x)?;
+
+// Square operation: [2.0, -3.0, 4.0] -> [4.0, 9.0, 16.0]
+let data = Tensor::new(vec![2.0, -3.0, 4.0], vec![3]);
+let view = data.view();
+let squared = view.square()?;
+
+// Mean Squared Error between predictions and targets
+let predictions = Tensor::new(vec![1.0, 2.0, 3.0], vec![3]);
+let targets = Tensor::new(vec![2.0, 4.0, 5.0], vec![3]);
+let pred_view = predictions.view();
+let target_view = targets.view();
+let mse = pred_view.mse(&target_view)?; // Result: 3.0
+
+// Slicing: Extract elements 1-3 from a vector
+let data = Tensor::new(vec![1.0, 2.0, 3.0, 4.0, 5.0], vec![5]);
+let view = data.view();
+let slice = view.slice(1, 4)?; // Gets [2.0, 3.0, 4.0]
+
+// Slicing a matrix to get specific columns
+let matrix = Tensor::new(vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0], vec![2, 3]);
+let view = matrix.view();
+let columns = view.slice(1, 3)?; // Gets columns 1-2: [[2, 3], [5, 6]]
 ```
 
 ## Technologies Used
