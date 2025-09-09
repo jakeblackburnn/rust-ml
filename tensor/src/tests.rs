@@ -1347,3 +1347,207 @@ fn ones_large_tensor() {
     assert_eq!(tensor.elements.len(), 20);
     assert!(tensor.elements.iter().all(|&x| x == 1.0));
 }
+
+#[test]
+fn slice_1d_vector_basic() {
+    let tensor = Tensor::new(vec![1.0, 2.0, 3.0, 4.0, 5.0], vec![5]);
+    let view = tensor.view();
+    
+    let slice = view.slice(1, 4).unwrap();
+    assert_eq!(slice.shape, vec![3]);
+    assert_eq!(slice.elements, &[2.0, 3.0, 4.0]);
+}
+
+#[test]
+fn slice_1d_vector_start() {
+    let tensor = Tensor::new(vec![1.0, 2.0, 3.0, 4.0], vec![4]);
+    let view = tensor.view();
+    
+    let slice = view.slice(0, 2).unwrap();
+    assert_eq!(slice.shape, vec![2]);
+    assert_eq!(slice.elements, &[1.0, 2.0]);
+}
+
+#[test]
+fn slice_1d_vector_end() {
+    let tensor = Tensor::new(vec![1.0, 2.0, 3.0, 4.0], vec![4]);
+    let view = tensor.view();
+    
+    let slice = view.slice(2, 4).unwrap();
+    assert_eq!(slice.shape, vec![2]);
+    assert_eq!(slice.elements, &[3.0, 4.0]);
+}
+
+#[test]
+fn slice_1d_single_element() {
+    let tensor = Tensor::new(vec![1.0, 2.0, 3.0], vec![3]);
+    let view = tensor.view();
+    
+    let slice = view.slice(1, 2).unwrap();
+    assert_eq!(slice.shape, vec![1]);
+    assert_eq!(slice.elements, &[2.0]);
+}
+
+#[test]
+fn slice_1d_full_range() {
+    let tensor = Tensor::new(vec![1.0, 2.0, 3.0], vec![3]);
+    let view = tensor.view();
+    
+    let slice = view.slice(0, 3).unwrap();
+    assert_eq!(slice.shape, vec![3]);
+    assert_eq!(slice.elements, &[1.0, 2.0, 3.0]);
+}
+
+#[test]
+fn slice_2d_matrix_columns() {
+    // Matrix: [[1, 2, 3, 4], [5, 6, 7, 8]]
+    let tensor = Tensor::new(vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0], vec![2, 4]);
+    let view = tensor.view();
+    
+    let slice = view.slice(1, 3).unwrap();
+    assert_eq!(slice.shape, vec![2, 2]);
+    
+    // Should get columns 1-2: [[2, 3], [6, 7]]
+    assert_eq!(slice.get(&[0, 0]).unwrap(), 2.0);
+    assert_eq!(slice.get(&[0, 1]).unwrap(), 3.0);
+    assert_eq!(slice.get(&[1, 0]).unwrap(), 6.0);
+    assert_eq!(slice.get(&[1, 1]).unwrap(), 7.0);
+}
+
+#[test]
+fn slice_2d_first_columns() {
+    let tensor = Tensor::new(vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0], vec![2, 3]);
+    let view = tensor.view();
+    
+    let slice = view.slice(0, 2).unwrap();
+    assert_eq!(slice.shape, vec![2, 2]);
+    
+    // Should get first 2 columns: [[1, 2], [4, 5]]
+    assert_eq!(slice.get(&[0, 0]).unwrap(), 1.0);
+    assert_eq!(slice.get(&[0, 1]).unwrap(), 2.0);
+    assert_eq!(slice.get(&[1, 0]).unwrap(), 4.0);
+    assert_eq!(slice.get(&[1, 1]).unwrap(), 5.0);
+}
+
+#[test]
+fn slice_2d_last_columns() {
+    let tensor = Tensor::new(vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0], vec![2, 3]);
+    let view = tensor.view();
+    
+    let slice = view.slice(1, 3).unwrap();
+    assert_eq!(slice.shape, vec![2, 2]);
+    
+    // Should get columns 1-2: [[2, 3], [5, 6]]
+    assert_eq!(slice.get(&[0, 0]).unwrap(), 2.0);
+    assert_eq!(slice.get(&[0, 1]).unwrap(), 3.0);
+    assert_eq!(slice.get(&[1, 0]).unwrap(), 5.0);
+    assert_eq!(slice.get(&[1, 1]).unwrap(), 6.0);
+}
+
+#[test]
+fn slice_2d_single_column() {
+    let tensor = Tensor::new(vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0], vec![2, 3]);
+    let view = tensor.view();
+    
+    let slice = view.slice(1, 2).unwrap();
+    assert_eq!(slice.shape, vec![2, 1]);
+    
+    // Should get middle column: [[2], [5]]
+    assert_eq!(slice.get(&[0, 0]).unwrap(), 2.0);
+    assert_eq!(slice.get(&[1, 0]).unwrap(), 5.0);
+}
+
+#[test]
+fn slice_row_then_slice() {
+    // Test slicing a row slice - should work for feature extraction
+    let tensor = Tensor::new(vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0], vec![2, 4]);
+    let view = tensor.view();
+    
+    let row = view.row(0).unwrap(); // [1, 2, 3, 4]
+    let features = row.slice(0, 3).unwrap(); // First 3 elements as features
+    
+    assert_eq!(features.shape, vec![3]);
+    assert_eq!(features.elements, &[1.0, 2.0, 3.0]);
+    
+    let target = row.get(&[3]).unwrap(); // Last element as target
+    assert_eq!(target, 4.0);
+}
+
+#[test]
+fn slice_out_of_bounds_start() {
+    let tensor = Tensor::new(vec![1.0, 2.0, 3.0], vec![3]);
+    let view = tensor.view();
+    
+    let result = view.slice(3, 4);
+    assert!(result.is_err());
+    
+    if let Err(TensorError::CoordsOutOfBounds { rank, provided, max }) = result {
+        assert_eq!(rank, 1);
+        assert_eq!(provided, 3);
+        assert_eq!(max, 2);
+    }
+}
+
+#[test]
+fn slice_out_of_bounds_end() {
+    let tensor = Tensor::new(vec![1.0, 2.0, 3.0], vec![3]);
+    let view = tensor.view();
+    
+    let result = view.slice(0, 4);
+    assert!(result.is_err());
+    
+    if let Err(TensorError::CoordsOutOfBounds { rank, provided, max }) = result {
+        assert_eq!(rank, 1);
+        assert_eq!(provided, 3);
+        assert_eq!(max, 2);
+    }
+}
+
+#[test]
+fn slice_invalid_range() {
+    let tensor = Tensor::new(vec![1.0, 2.0, 3.0], vec![3]);
+    let view = tensor.view();
+    
+    let result = view.slice(2, 1);
+    assert!(result.is_err());
+}
+
+#[test]
+fn slice_empty_range() {
+    let tensor = Tensor::new(vec![1.0, 2.0, 3.0], vec![3]);
+    let view = tensor.view();
+    
+    let result = view.slice(1, 1);
+    assert!(result.is_err());
+}
+
+#[test]
+fn slice_3d_tensor() {
+    let tensor = Tensor::new(
+        vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0], 
+        vec![2, 2, 2]
+    );
+    let view = tensor.view();
+    
+    // Slice along last dimension (columns)
+    let slice = view.slice(0, 1).unwrap();
+    assert_eq!(slice.shape, vec![2, 2, 1]);
+    
+    // Should get first column of each 2x2 slice
+    assert_eq!(slice.get(&[0, 0, 0]).unwrap(), 1.0);
+    assert_eq!(slice.get(&[0, 1, 0]).unwrap(), 3.0);
+    assert_eq!(slice.get(&[1, 0, 0]).unwrap(), 5.0);
+    assert_eq!(slice.get(&[1, 1, 0]).unwrap(), 7.0);
+}
+
+#[test]
+fn slice_preserves_strides() {
+    let tensor = Tensor::new(vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0], vec![2, 3]);
+    let view = tensor.view();
+    
+    let slice = view.slice(1, 3).unwrap();
+    
+    // Original strides should be preserved for 2D+
+    assert_eq!(slice.strides, view.strides);
+    assert_eq!(slice.strides, vec![3, 1]);
+}

@@ -1,6 +1,6 @@
 mod tests;
 mod error;
-use error::TensorError;
+pub use error::TensorError;
 
 use std::fs;
 use rand::prelude::*;
@@ -439,6 +439,50 @@ impl<'a> TensorView<'a> {
             elements: &self.elements[offset..],
             shape: vec![rows],
             strides: vec![row_stride],  // Jump by full row width to get next element in column
+        })
+    }
+
+    pub fn slice(&self, start: usize, end: usize) -> Result<TensorView, TensorError> {
+        if self.shape.is_empty() {
+            return Err(TensorError::RankMismatch {
+                provided: 0,
+                expected: 1,
+            });
+        }
+
+        let last_dim = self.shape.len() - 1;
+        let dim_size = self.shape[last_dim];
+        
+        if start >= dim_size || end > dim_size || start >= end {
+            return Err(TensorError::CoordsOutOfBounds {
+                rank: last_dim + 1,
+                provided: if start >= dim_size { start } else { end - 1 },
+                max: dim_size - 1,
+            });
+        }
+
+        let slice_size = end - start;
+        
+        // For 1D: simple slice
+        if self.shape.len() == 1 {
+            let offset = start;
+            return Ok(TensorView {
+                elements: &self.elements[offset..offset + slice_size],
+                shape: vec![slice_size],
+                strides: vec![1],
+            });
+        }
+        
+        // For 2D+: slice along last dimension
+        let mut new_shape = self.shape.clone();
+        new_shape[last_dim] = slice_size;
+        
+        let offset = start;
+        
+        Ok(TensorView {
+            elements: &self.elements[offset..],
+            shape: new_shape,
+            strides: self.strides.clone(),
         })
     }
 }
