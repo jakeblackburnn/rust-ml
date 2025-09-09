@@ -274,6 +274,28 @@ impl<'a> TensorView<'a> {
         Ok( Tensor::new(results, self.shape.clone()) )
     }
 
+    pub fn square(&self) -> Result<Tensor, TensorError> {
+        let len = self.shape.iter().product();
+        let mut results = vec![0.0; len];
+
+        let mut coords = vec![0; self.shape.len()];
+
+        for i in 0..len {
+            let elem = self.get(&coords)?;
+            results[i] = elem * elem;
+
+            // increment coords
+            for j in ( 0..coords.len() ).rev() {
+                coords[j] += 1;
+                if coords[j] < self.shape[j] {
+                    break;
+                }
+                coords[j] = 0;
+            }
+        }
+
+        Ok( Tensor::new(results, self.shape.clone()) )
+    }
 
     pub fn sum(&self) -> Result<f32, TensorError> {
         let len = self.shape.iter().product();
@@ -304,6 +326,20 @@ impl<'a> TensorView<'a> {
         let len: usize = self.shape.iter().product();
         let mean = sum / (len as f32);
         Ok(mean)
+    }
+
+    pub fn mse(&self, other: &TensorView) -> Result<f32, TensorError> {
+        if self.shape != other.shape {
+            return Err( TensorError::ShapeMismatch {
+                provided: other.shape.clone(),
+                expected: self.shape.clone(),
+            });
+        }
+
+        let errors = self.sub(other)?;
+        let squared_errors = errors.view().square()?;
+        let mse = squared_errors.view().mean()?;
+        Ok(mse)
     }
  
 

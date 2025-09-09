@@ -1551,3 +1551,94 @@ fn slice_preserves_strides() {
     assert_eq!(slice.strides, view.strides);
     assert_eq!(slice.strides, vec![3, 1]);
 }
+
+#[test]
+fn square_vector() {
+    let tensor = Tensor::new(vec![2.0, -3.0, 4.0], vec![3]);
+    let view = tensor.view();
+    let result = view.square().unwrap();
+    
+    assert_eq!(result.elements, vec![4.0, 9.0, 16.0]);
+    assert_eq!(result.shape, vec![3]);
+}
+
+#[test]
+fn square_matrix() {
+    let tensor = Tensor::new(vec![1.0, -2.0, 3.0, -4.0], vec![2, 2]);
+    let view = tensor.view();
+    let result = view.square().unwrap();
+    
+    assert_eq!(result.elements, vec![1.0, 4.0, 9.0, 16.0]);
+    assert_eq!(result.shape, vec![2, 2]);
+}
+
+#[test]
+fn square_single_element() {
+    let tensor = Tensor::new(vec![-5.0], vec![1]);
+    let view = tensor.view();
+    let result = view.square().unwrap();
+    
+    assert_eq!(result.elements, vec![25.0]);
+    assert_eq!(result.shape, vec![1]);
+}
+
+#[test]
+fn mse_perfect_match() {
+    let predictions = Tensor::new(vec![1.0, 2.0, 3.0], vec![3]);
+    let targets = Tensor::new(vec![1.0, 2.0, 3.0], vec![3]);
+    
+    let pred_view = predictions.view();
+    let target_view = targets.view();
+    
+    let mse = pred_view.mse(&target_view).unwrap();
+    assert_eq!(mse, 0.0);
+}
+
+#[test]
+fn mse_simple_errors() {
+    let predictions = Tensor::new(vec![1.0, 2.0, 3.0], vec![3]);
+    let targets = Tensor::new(vec![2.0, 4.0, 5.0], vec![3]);
+    
+    let pred_view = predictions.view();
+    let target_view = targets.view();
+    
+    // errors: [-1.0, -2.0, -2.0]
+    // squared: [1.0, 4.0, 4.0] 
+    // mean: 9.0 / 3 = 3.0
+    let mse = pred_view.mse(&target_view).unwrap();
+    assert_eq!(mse, 3.0);
+}
+
+#[test]
+fn mse_matrix() {
+    let predictions = Tensor::new(vec![1.0, 2.0, 3.0, 4.0], vec![2, 2]);
+    let targets = Tensor::new(vec![2.0, 2.0, 5.0, 4.0], vec![2, 2]);
+    
+    let pred_view = predictions.view();
+    let target_view = targets.view();
+    
+    // errors: [-1.0, 0.0, -2.0, 0.0]
+    // squared: [1.0, 0.0, 4.0, 0.0]
+    // mean: 5.0 / 4 = 1.25
+    let mse = pred_view.mse(&target_view).unwrap();
+    assert_eq!(mse, 1.25);
+}
+
+#[test]
+fn mse_shape_mismatch() {
+    let predictions = Tensor::new(vec![1.0, 2.0, 3.0], vec![3]);
+    let targets = Tensor::new(vec![1.0, 2.0], vec![2]);
+    
+    let pred_view = predictions.view();
+    let target_view = targets.view();
+    
+    let result = pred_view.mse(&target_view);
+    assert!(result.is_err());
+    
+    if let Err(TensorError::ShapeMismatch { provided, expected }) = result {
+        assert_eq!(provided, vec![2]);
+        assert_eq!(expected, vec![3]);
+    } else {
+        panic!("Expected ShapeMismatch error");
+    }
+}
