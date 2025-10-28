@@ -1628,17 +1628,100 @@ fn mse_matrix() {
 fn mse_shape_mismatch() {
     let predictions = Tensor::new(vec![1.0, 2.0, 3.0], vec![3]);
     let targets = Tensor::new(vec![1.0, 2.0], vec![2]);
-    
+
     let pred_view = predictions.view();
     let target_view = targets.view();
-    
+
     let result = pred_view.mse(&target_view);
     assert!(result.is_err());
-    
+
     if let Err(TensorError::ShapeMismatch { provided, expected }) = result {
         assert_eq!(provided, vec![2]);
         assert_eq!(expected, vec![3]);
     } else {
         panic!("Expected ShapeMismatch error");
+    }
+}
+
+// ReLU Tests
+
+#[test]
+fn relu_basic_vector() {
+    let input = Tensor::new(vec![-2.0, -1.0, 0.0, 1.0, 2.0], vec![5]);
+    let result = input.view().relu().unwrap();
+
+    assert_eq!(result.elements, vec![0.0, 0.0, 0.0, 1.0, 2.0]);
+    assert_eq!(result.shape, vec![5]);
+}
+
+#[test]
+fn relu_matrix() {
+    let input = Tensor::new(
+        vec![
+            -3.0, 2.0, -1.0,
+            5.0, -2.0, 0.0
+        ],
+        vec![2, 3]
+    );
+    let result = input.view().relu().unwrap();
+
+    assert_eq!(result.elements, vec![0.0, 2.0, 0.0, 5.0, 0.0, 0.0]);
+    assert_eq!(result.shape, vec![2, 3]);
+}
+
+// Softmax Tests
+
+#[test]
+fn softmax_basic_vector() {
+    let input = Tensor::new(vec![1.0, 2.0, 3.0], vec![3]);
+    let result = input.view().softmax().unwrap();
+
+    // Verify all elements are between 0 and 1
+    for &val in &result.elements {
+        assert!(val >= 0.0 && val <= 1.0);
+    }
+
+    // Verify sum equals 1.0 (with floating-point tolerance)
+    let sum: f32 = result.elements.iter().sum();
+    assert!((sum - 1.0).abs() < 1e-6);
+
+    // Verify monotonicity: larger inputs should have higher probabilities
+    assert!(result.elements[0] < result.elements[1]);
+    assert!(result.elements[1] < result.elements[2]);
+}
+
+#[test]
+fn softmax_large_values_stability() {
+    // Test numerical stability with large values
+    let input = Tensor::new(vec![1000.0, 1001.0, 1002.0], vec![3]);
+    let result = input.view().softmax().unwrap();
+
+    // Verify no NaN or infinity
+    for &val in &result.elements {
+        assert!(val.is_finite());
+        assert!(!val.is_nan());
+    }
+
+    // Verify sum equals 1.0 (with floating-point tolerance)
+    let sum: f32 = result.elements.iter().sum();
+    assert!((sum - 1.0).abs() < 1e-6);
+
+    // Verify all elements are between 0 and 1
+    for &val in &result.elements {
+        assert!(val >= 0.0 && val <= 1.0);
+    }
+}
+
+#[test]
+fn softmax_rejects_matrix() {
+    let input = Tensor::new(vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0], vec![2, 3]);
+    let result = input.view().softmax();
+
+    assert!(result.is_err());
+
+    if let Err(TensorError::NotVectorError(rank)) = result {
+        assert_eq!(rank, 2);
+    } else {
+        panic!("Expected NotVectorError");
     }
 }

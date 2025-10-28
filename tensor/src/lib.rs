@@ -297,6 +297,67 @@ impl<'a> TensorView<'a> {
         Ok( Tensor::new(results, self.shape.clone()) )
     }
 
+    pub fn relu(&self) -> Result<Tensor, TensorError> {
+        let len = self.shape.iter().product();
+        let mut results = vec![0.0; len];
+
+        let mut coords = vec![0; self.shape.len()];
+
+        for i in 0..len {
+            let elem = self.get(&coords)?;
+            results[i] = elem.max(0.0);
+
+            // increment coords
+            for j in ( 0..coords.len() ).rev() {
+                coords[j] += 1;
+                if coords[j] < self.shape[j] {
+                    break;
+                }
+                coords[j] = 0;
+            }
+        }
+
+        Ok( Tensor::new(results, self.shape.clone()) )
+    }
+
+    pub fn softmax(&self) -> Result<Tensor, TensorError> {
+        // Validate that this is a vector
+        if self.shape.len() != 1 {
+            return Err(TensorError::NotVectorError(self.shape.len()));
+        }
+
+        let len = self.shape[0];
+        let mut results = vec![0.0; len];
+
+        // Step 1: Find max value for numerical stability
+        let mut max_val = f32::NEG_INFINITY;
+        let mut coords = vec![0; self.shape.len()];
+        for i in 0..len {
+            coords[0] = i;
+            let elem = self.get(&coords)?;
+            if elem > max_val {
+                max_val = elem;
+            }
+        }
+
+        // Step 2: Compute exp(x - max) and sum
+        let mut sum_exp = 0.0;
+        for i in 0..len {
+            coords[0] = i;
+            let elem = self.get(&coords)?;
+            let exp_val = (elem - max_val).exp();
+            results[i] = exp_val;
+            sum_exp += exp_val;
+        }
+
+        // Step 3: Normalize by dividing by sum
+        for i in 0..len {
+            results[i] /= sum_exp;
+        }
+
+        Ok( Tensor::new(results, self.shape.clone()) )
+    }
+
     pub fn sum(&self) -> Result<f32, TensorError> {
         let len = self.shape.iter().product();
 
