@@ -6,6 +6,7 @@ use std::fs;
 use rand::prelude::*;
 use rand_distr::Normal;
 
+#[derive(Clone, Debug)]
 pub struct Tensor {
     elements: Vec<f32>,
     pub shape: Vec<usize>,
@@ -229,6 +230,36 @@ impl<'a> TensorView<'a> {
         Ok( Tensor::new(results, self.shape.clone()))
     }
 
+    pub fn elem_wise_mult(&self, other: &TensorView) -> Result<Tensor, TensorError> {
+        if self.shape != other.shape {
+            return Err( TensorError::ShapeMismatch {
+                provided: other.shape.clone(),
+                expected: self.shape.clone(),
+            });
+        }
+
+        let len = self.shape.iter().product();
+        let mut results = vec![0.0; len];
+        let mut coords = vec![0; self.shape.len()];
+
+        for i in 0..len {
+            let self_elem = self.get(&coords)?;
+            let other_elem = other.get(&coords)?;
+            results[i] = self_elem * other_elem;
+
+            // increment coords
+            for j in ( 0..coords.len() ).rev() {
+                coords[j] += 1;
+                if coords[j] < self.shape[j] {
+                    break;
+                }
+                coords[j] = 0;
+            }
+        }
+
+        Ok( Tensor::new(results, self.shape.clone()))
+    }
+
     pub fn mult(&self, factor: f32) -> Result<Tensor, TensorError> {
         let len = self.shape.iter().product();
         let mut results = vec![0.0; len];
@@ -321,41 +352,47 @@ impl<'a> TensorView<'a> {
     }
 
     pub fn softmax(&self) -> Result<Tensor, TensorError> {
-        // Validate that this is a vector
-        if self.shape.len() != 1 {
-            return Err(TensorError::NotVectorError(self.shape.len()));
+        // Normalize shape: 1D [n] becomes 2D [1, n]
+        let (batch_size, num_features) = match self.shape.len() {
+            1 => (1, self.shape[0]),
+            2 => (self.shape[0], self.shape[1]),
+            _ => return Err(TensorError::NotVectorError(self.shape.len())),
+        };
+
+        if num_features == 0 {
+            return Ok(Tensor::new(vec![], self.shape.clone()));
         }
 
-        let len = self.shape[0];
-        let mut results = vec![0.0; len];
+        let mut results = vec![0.0; batch_size * num_features];
 
-        // Step 1: Find max value for numerical stability
-        let mut max_val = f32::NEG_INFINITY;
-        let mut coords = vec![0; self.shape.len()];
-        for i in 0..len {
-            coords[0] = i;
-            let elem = self.get(&coords)?;
-            if elem > max_val {
-                max_val = elem;
+        for batch_idx in 0..batch_size {
+            let offset = batch_idx * num_features;
+            let row = &self.elements[offset..offset + num_features];
+            let out = &mut results[offset..offset + num_features];
+
+            // Step 1: Find max for numerical stability
+            let max_val = row.iter().copied().fold(f32::NEG_INFINITY, f32::max);
+
+            // Step 2: Compute exp(x - max) and sum
+            let sum_exp: f32 = row.iter()
+                .enumerate()
+                .map(|(j, &x)| {
+                    let exp_val = (x - max_val).exp();
+                    out[j] = exp_val;
+                    exp_val
+                })
+                .sum();
+
+            // Step 3: Normalize with edge case handling
+            if sum_exp > 0.0 && sum_exp.is_finite() {
+                out.iter_mut().for_each(|x| *x /= sum_exp);
+            } else {
+                // Edge case: if sum is zero or non-finite, return uniform distribution
+                out.fill(1.0 / num_features as f32);
             }
         }
 
-        // Step 2: Compute exp(x - max) and sum
-        let mut sum_exp = 0.0;
-        for i in 0..len {
-            coords[0] = i;
-            let elem = self.get(&coords)?;
-            let exp_val = (elem - max_val).exp();
-            results[i] = exp_val;
-            sum_exp += exp_val;
-        }
-
-        // Step 3: Normalize by dividing by sum
-        for i in 0..len {
-            results[i] /= sum_exp;
-        }
-
-        Ok( Tensor::new(results, self.shape.clone()) )
+        Ok(Tensor::new(results, self.shape.clone()))
     }
 
     pub fn sum(&self) -> Result<f32, TensorError> {
@@ -381,6 +418,74 @@ impl<'a> TensorView<'a> {
         Ok(result)
     }
 
+    pub fn sum_axis(&self, axis: usize) -> Result<Tensor, TensorError> {
+        // Validate axis is in range
+        if axis >= self.shape.len() {
+            return Err(TensorError::CoordsOutOfBounds {
+                rank: axis + 1,
+                provided: axis,
+                max: self.shape.len() - 1,
+            });
+        }
+
+        // Calculate result shape by removing the axis dimension
+        let mut result_shape = Vec::new();
+        for (i, &dim) in self.shape.iter().enumerate() {
+            if i != axis {
+                result_shape.push(dim);
+            }
+        }
+
+        // Handle edge case: if result is scalar (all dimensions summed)
+        if result_shape.is_empty() {
+            result_shape.push(1);
+        }
+
+        // Calculate result size
+        let result_len: usize = result_shape.iter().product();
+        let mut result_elements = vec![0.0; result_len];
+
+        // Iterate through all positions in the result
+        let mut result_coords = vec![0; if result_shape.len() == 1 && result_shape[0] == 1 { 0 } else { result_shape.len() }];
+
+        for result_idx in 0..result_len {
+            // Build full coordinates by inserting axis position
+            let mut full_coords = Vec::new();
+            let mut result_coord_idx = 0;
+            for i in 0..self.shape.len() {
+                if i == axis {
+                    full_coords.push(0); // Placeholder, will iterate
+                } else {
+                    if result_coord_idx < result_coords.len() {
+                        full_coords.push(result_coords[result_coord_idx]);
+                        result_coord_idx += 1;
+                    }
+                }
+            }
+
+            // Sum along the axis dimension
+            let mut sum = 0.0;
+            for axis_val in 0..self.shape[axis] {
+                full_coords[axis] = axis_val;
+                sum += self.get(&full_coords)?;
+            }
+
+            result_elements[result_idx] = sum;
+
+            // Increment result coords
+            if !result_coords.is_empty() {
+                for j in (0..result_coords.len()).rev() {
+                    result_coords[j] += 1;
+                    if result_coords[j] < result_shape[j] {
+                        break;
+                    }
+                    result_coords[j] = 0;
+                }
+            }
+        }
+
+        Ok(Tensor::new(result_elements, result_shape))
+    }
 
     pub fn mean(&self) -> Result<f32, TensorError> {
         let sum = self.sum()?;

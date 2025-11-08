@@ -947,6 +947,125 @@ fn subtract_views_different_underlying_storage() {
 }
 
 #[test]
+fn elem_wise_mult_vector() {
+    let x = Tensor::new(vec![2.0, 3.0, 4.0], vec![3]);
+    let y = Tensor::new(vec![5.0, 6.0, 7.0], vec![3]);
+
+    let xview = x.view();
+    let yview = y.view();
+
+    let result = xview.elem_wise_mult(&yview).unwrap();
+
+    assert_eq!(result.elements, vec![10.0, 18.0, 28.0]); // [2*5, 3*6, 4*7]
+    assert_eq!(result.shape, vec![3]);
+}
+
+#[test]
+fn elem_wise_mult_matrix() {
+    let x = Tensor::new(vec![1.0, 2.0, 3.0, 4.0], vec![2, 2]);
+    let y = Tensor::new(vec![5.0, 6.0, 7.0, 8.0], vec![2, 2]);
+
+    let xview = x.view();
+    let yview = y.view();
+
+    let result = xview.elem_wise_mult(&yview).unwrap();
+
+    assert_eq!(result.elements, vec![5.0, 12.0, 21.0, 32.0]); // [1*5, 2*6, 3*7, 4*8]
+    assert_eq!(result.shape, vec![2, 2]);
+}
+
+#[test]
+fn elem_wise_mult_with_zeros() {
+    let x = Tensor::new(vec![2.0, 3.0, 4.0], vec![3]);
+    let y = Tensor::new(vec![0.0, 6.0, 0.0], vec![3]);
+
+    let xview = x.view();
+    let yview = y.view();
+
+    let result = xview.elem_wise_mult(&yview).unwrap();
+
+    assert_eq!(result.elements, vec![0.0, 18.0, 0.0]); // [2*0, 3*6, 4*0]
+    assert_eq!(result.shape, vec![3]);
+}
+
+#[test]
+fn elem_wise_mult_with_negatives() {
+    let x = Tensor::new(vec![2.0, -3.0, 4.0], vec![3]);
+    let y = Tensor::new(vec![-5.0, 6.0, -7.0], vec![3]);
+
+    let xview = x.view();
+    let yview = y.view();
+
+    let result = xview.elem_wise_mult(&yview).unwrap();
+
+    assert_eq!(result.elements, vec![-10.0, -18.0, -28.0]); // [2*-5, -3*6, 4*-7]
+    assert_eq!(result.shape, vec![3]);
+}
+
+#[test]
+fn elem_wise_mult_identity() {
+    let x = Tensor::new(vec![2.0, 3.0, 4.0], vec![3]);
+    let y = Tensor::new(vec![1.0, 1.0, 1.0], vec![3]);
+
+    let xview = x.view();
+    let yview = y.view();
+
+    let result = xview.elem_wise_mult(&yview).unwrap();
+
+    assert_eq!(result.elements, vec![2.0, 3.0, 4.0]); // [2*1, 3*1, 4*1]
+    assert_eq!(result.shape, vec![3]);
+}
+
+#[test]
+fn elem_wise_mult_shape_mismatch() {
+    let tensor_a = Tensor::new(vec![1.0, 2.0, 3.0], vec![3]);
+    let tensor_b = Tensor::new(vec![1.0, 2.0], vec![2]);
+
+    let view_a = tensor_a.view();
+    let view_b = tensor_b.view();
+
+    let result = view_a.elem_wise_mult(&view_b);
+    assert!(result.is_err());
+
+    if let Err(TensorError::ShapeMismatch { provided, expected }) = result {
+        assert_eq!(provided, vec![2]);
+        assert_eq!(expected, vec![3]);
+    } else {
+        panic!("Expected ShapeMismatch error");
+    }
+}
+
+#[test]
+fn elem_wise_mult_row_slices() {
+    // Test multiplying row slices from the same tensor
+    let tensor = Tensor::new(vec![2.0, 3.0, 4.0, 5.0, 6.0, 7.0], vec![2, 3]);
+    let view = tensor.view();
+
+    let row0 = view.row(0).unwrap(); // [2.0, 3.0, 4.0]
+    let row1 = view.row(1).unwrap(); // [5.0, 6.0, 7.0]
+
+    let result = row0.elem_wise_mult(&row1).unwrap();
+
+    assert_eq!(result.shape, vec![3]);
+    assert_eq!(result.elements, vec![10.0, 18.0, 28.0]); // [2*5, 3*6, 4*7]
+}
+
+#[test]
+fn elem_wise_mult_column_slices() {
+    // Test multiplying column slices (non-contiguous views)
+    let tensor = Tensor::new(vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0], vec![2, 3]);
+    let view = tensor.view();
+
+    let col0 = view.column(0).unwrap(); // [1.0, 4.0] (non-contiguous)
+    let col1 = view.column(1).unwrap(); // [2.0, 5.0] (non-contiguous)
+
+    let result = col0.elem_wise_mult(&col1).unwrap();
+
+    assert_eq!(result.shape, vec![2]);
+    assert_eq!(result.elements, vec![2.0, 20.0]); // [1*2, 4*5]
+}
+
+#[test]
 fn add_3d_tensor_slices() {
     // Test adding slices from 3D tensors - complex stride patterns
     let tensor = Tensor::new(
@@ -1274,6 +1393,142 @@ fn sum_mean_fractional_values() {
     
     let result = view.mean().unwrap();
     assert!((result - 0.25).abs() < 1e-6); // 1.0 / 4 = 0.25
+}
+
+#[test]
+fn sum_axis_matrix_axis_0() {
+    // Sum along axis 0 (sum down rows)
+    let tensor = Tensor::new(vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0], vec![2, 3]);
+    let view = tensor.view();
+    let result = view.sum_axis(0).unwrap();
+
+    assert_eq!(result.shape, vec![3]);
+    assert_eq!(result.elements, vec![5.0, 7.0, 9.0]); // [1+4, 2+5, 3+6]
+}
+
+#[test]
+fn sum_axis_matrix_axis_1() {
+    // Sum along axis 1 (sum across columns)
+    let tensor = Tensor::new(vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0], vec![2, 3]);
+    let view = tensor.view();
+    let result = view.sum_axis(1).unwrap();
+
+    assert_eq!(result.shape, vec![2]);
+    assert_eq!(result.elements, vec![6.0, 15.0]); // [1+2+3, 4+5+6]
+}
+
+#[test]
+fn sum_axis_3d_axis_0() {
+    let tensor = Tensor::new(
+        vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0],
+        vec![2, 2, 2]
+    );
+    let view = tensor.view();
+    let result = view.sum_axis(0).unwrap();
+
+    assert_eq!(result.shape, vec![2, 2]);
+    assert_eq!(result.elements, vec![6.0, 8.0, 10.0, 12.0]); // [1+5, 2+6, 3+7, 4+8]
+}
+
+#[test]
+fn sum_axis_3d_axis_1() {
+    let tensor = Tensor::new(
+        vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0],
+        vec![2, 2, 2]
+    );
+    let view = tensor.view();
+    let result = view.sum_axis(1).unwrap();
+
+    assert_eq!(result.shape, vec![2, 2]);
+    assert_eq!(result.elements, vec![4.0, 6.0, 12.0, 14.0]); // [1+3, 2+4, 5+7, 6+8]
+}
+
+#[test]
+fn sum_axis_3d_axis_2() {
+    let tensor = Tensor::new(
+        vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0],
+        vec![2, 2, 2]
+    );
+    let view = tensor.view();
+    let result = view.sum_axis(2).unwrap();
+
+    assert_eq!(result.shape, vec![2, 2]);
+    assert_eq!(result.elements, vec![3.0, 7.0, 11.0, 15.0]); // [1+2, 3+4, 5+6, 7+8]
+}
+
+#[test]
+fn sum_axis_invalid_axis() {
+    let tensor = Tensor::new(vec![1.0, 2.0, 3.0, 4.0], vec![2, 2]);
+    let view = tensor.view();
+
+    let result = view.sum_axis(2);
+    assert!(result.is_err());
+
+    if let Err(TensorError::CoordsOutOfBounds { rank: _, provided, max }) = result {
+        assert_eq!(provided, 2);
+        assert_eq!(max, 1);
+    } else {
+        panic!("Expected CoordsOutOfBounds error");
+    }
+}
+
+#[test]
+fn sum_axis_vector() {
+    // Summing a vector along axis 0 should give a scalar
+    let tensor = Tensor::new(vec![1.0, 2.0, 3.0, 4.0], vec![4]);
+    let view = tensor.view();
+    let result = view.sum_axis(0).unwrap();
+
+    assert_eq!(result.shape, vec![1]);
+    assert_eq!(result.elements, vec![10.0]); // 1+2+3+4
+}
+
+#[test]
+fn sum_axis_with_zeros() {
+    let tensor = Tensor::new(vec![1.0, 0.0, 3.0, 0.0, 5.0, 0.0], vec![2, 3]);
+    let view = tensor.view();
+    let result = view.sum_axis(0).unwrap();
+
+    assert_eq!(result.shape, vec![3]);
+    assert_eq!(result.elements, vec![1.0, 5.0, 3.0]); // [1+0, 0+5, 3+0]
+}
+
+#[test]
+fn sum_axis_with_negatives() {
+    let tensor = Tensor::new(vec![1.0, -2.0, 3.0, -4.0, 5.0, -6.0], vec![2, 3]);
+    let view = tensor.view();
+    let result = view.sum_axis(1).unwrap();
+
+    assert_eq!(result.shape, vec![2]);
+    assert_eq!(result.elements, vec![2.0, -5.0]); // [1-2+3, -4+5-6]
+}
+
+#[test]
+fn sum_axis_row_slice() {
+    // Test summing a row slice (should reduce to scalar with shape [1])
+    let tensor = Tensor::new(vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0], vec![2, 3]);
+    let view = tensor.view();
+    let row = view.row(0).unwrap(); // [1.0, 2.0, 3.0]
+
+    let result = row.sum_axis(0).unwrap();
+    assert_eq!(result.shape, vec![1]);
+    assert_eq!(result.elements, vec![6.0]); // 1+2+3
+}
+
+#[test]
+fn sum_axis_total_equals_sum() {
+    // Verify that sum_axis gives same total as sum() method
+    let tensor = Tensor::new(vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0], vec![2, 3]);
+    let view = tensor.view();
+
+    let total_sum = view.sum().unwrap();
+
+    // Sum along axis 0, then sum the result
+    let partial_sum = view.sum_axis(0).unwrap();
+    let final_sum = partial_sum.view().sum().unwrap();
+
+    assert_eq!(total_sum, final_sum);
+    assert_eq!(final_sum, 21.0);
 }
 
 #[test]
@@ -1713,14 +1968,187 @@ fn softmax_large_values_stability() {
 }
 
 #[test]
-fn softmax_rejects_matrix() {
-    let input = Tensor::new(vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0], vec![2, 3]);
+fn softmax_batch_2x3() {
+    // Test batch softmax with 2 samples, 3 classes each
+    let input = Tensor::new(
+        vec![
+            1.0, 2.0, 3.0,  // Sample 1
+            4.0, 5.0, 6.0,  // Sample 2
+        ],
+        vec![2, 3]
+    );
+    let result = input.view().softmax().unwrap();
+
+    assert_eq!(result.shape, vec![2, 3]);
+
+    // Each row should sum to 1.0
+    let row0_sum = result.get_nd(&[0, 0]).unwrap()
+                 + result.get_nd(&[0, 1]).unwrap()
+                 + result.get_nd(&[0, 2]).unwrap();
+    assert!((row0_sum - 1.0).abs() < 1e-6);
+
+    let row1_sum = result.get_nd(&[1, 0]).unwrap()
+                 + result.get_nd(&[1, 1]).unwrap()
+                 + result.get_nd(&[1, 2]).unwrap();
+    assert!((row1_sum - 1.0).abs() < 1e-6);
+
+    // All values should be between 0 and 1
+    for i in 0..2 {
+        for j in 0..3 {
+            let val = result.get_nd(&[i, j]).unwrap();
+            assert!(val >= 0.0 && val <= 1.0);
+            assert!(val.is_finite());
+        }
+    }
+
+    // Within each row, larger inputs should have higher probabilities
+    assert!(result.get_nd(&[0, 0]).unwrap() < result.get_nd(&[0, 1]).unwrap());
+    assert!(result.get_nd(&[0, 1]).unwrap() < result.get_nd(&[0, 2]).unwrap());
+    assert!(result.get_nd(&[1, 0]).unwrap() < result.get_nd(&[1, 1]).unwrap());
+    assert!(result.get_nd(&[1, 1]).unwrap() < result.get_nd(&[1, 2]).unwrap());
+}
+
+#[test]
+fn softmax_batch_single_sample() {
+    // Test that batch softmax with 1 sample gives same result as vector softmax
+    let input_batch = Tensor::new(vec![1.0, 2.0, 3.0], vec![1, 3]);
+    let input_vec = Tensor::new(vec![1.0, 2.0, 3.0], vec![3]);
+
+    let result_batch = input_batch.view().softmax().unwrap();
+    let result_vec = input_vec.view().softmax().unwrap();
+
+    assert_eq!(result_batch.shape, vec![1, 3]);
+    assert_eq!(result_vec.shape, vec![3]);
+
+    // Values should match
+    for i in 0..3 {
+        let batch_val = result_batch.get_nd(&[0, i]).unwrap();
+        let vec_val = result_vec.get_nd(&[i]).unwrap();
+        assert!((batch_val - vec_val).abs() < 1e-6);
+    }
+}
+
+#[test]
+fn softmax_batch_large_values_stability() {
+    // Test numerical stability with large values in batch mode
+    let input = Tensor::new(
+        vec![
+            1000.0, 1001.0, 1002.0,
+            2000.0, 2001.0, 2002.0,
+        ],
+        vec![2, 3]
+    );
+    let result = input.view().softmax().unwrap();
+
+    // Verify no NaN or infinity
+    for i in 0..2 {
+        for j in 0..3 {
+            let val = result.get_nd(&[i, j]).unwrap();
+            assert!(val.is_finite());
+            assert!(!val.is_nan());
+        }
+    }
+
+    // Each row should sum to 1.0
+    for i in 0..2 {
+        let row_sum = (0..3).map(|j| result.get_nd(&[i, j]).unwrap()).sum::<f32>();
+        assert!((row_sum - 1.0).abs() < 1e-6);
+    }
+}
+
+#[test]
+fn softmax_batch_multiple_sizes() {
+    // Test different batch sizes
+    let test_cases = vec![
+        (vec![1, 2], "1x2"),
+        (vec![3, 4], "3x4"),
+        (vec![5, 10], "5x10"),
+    ];
+
+    for (shape, label) in test_cases {
+        let size = shape[0] * shape[1];
+        let data: Vec<f32> = (0..size).map(|i| i as f32).collect();
+        let input = Tensor::new(data, shape.clone());
+        let result = input.view().softmax().unwrap();
+
+        assert_eq!(result.shape, shape, "Failed for {}", label);
+
+        // Each row should sum to 1.0
+        for i in 0..shape[0] {
+            let row_sum: f32 = (0..shape[1])
+                .map(|j| result.get_nd(&[i, j]).unwrap())
+                .sum();
+            assert!((row_sum - 1.0).abs() < 1e-6, "Row sum failed for {}", label);
+        }
+    }
+}
+
+#[test]
+fn softmax_batch_equal_values() {
+    // When all values in a row are equal, softmax should give uniform distribution
+    let input = Tensor::new(
+        vec![
+            5.0, 5.0, 5.0,
+            2.0, 2.0, 2.0,
+        ],
+        vec![2, 3]
+    );
+    let result = input.view().softmax().unwrap();
+
+    // Each element should be approximately 1/3
+    let expected = 1.0 / 3.0;
+    for i in 0..2 {
+        for j in 0..3 {
+            let val = result.get_nd(&[i, j]).unwrap();
+            assert!((val - expected).abs() < 1e-6);
+        }
+    }
+}
+
+#[test]
+fn softmax_batch_independent_rows() {
+    // Verify that softmax is applied independently to each row
+    // Row 1: [1, 2, 3] should give same result as standalone vector
+    // Row 2: [3, 2, 1] should give same result as standalone vector
+
+    let batch = Tensor::new(
+        vec![1.0, 2.0, 3.0, 3.0, 2.0, 1.0],
+        vec![2, 3]
+    );
+    let vec1 = Tensor::new(vec![1.0, 2.0, 3.0], vec![3]);
+    let vec2 = Tensor::new(vec![3.0, 2.0, 1.0], vec![3]);
+
+    let batch_result = batch.view().softmax().unwrap();
+    let vec1_result = vec1.view().softmax().unwrap();
+    let vec2_result = vec2.view().softmax().unwrap();
+
+    // Row 0 of batch should match vec1
+    for j in 0..3 {
+        let batch_val = batch_result.get_nd(&[0, j]).unwrap();
+        let vec_val = vec1_result.get_nd(&[j]).unwrap();
+        assert!((batch_val - vec_val).abs() < 1e-6);
+    }
+
+    // Row 1 of batch should match vec2
+    for j in 0..3 {
+        let batch_val = batch_result.get_nd(&[1, j]).unwrap();
+        let vec_val = vec2_result.get_nd(&[j]).unwrap();
+        assert!((batch_val - vec_val).abs() < 1e-6);
+    }
+}
+
+#[test]
+fn softmax_rejects_3d_tensor() {
+    let input = Tensor::new(
+        vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0],
+        vec![2, 2, 2]
+    );
     let result = input.view().softmax();
 
     assert!(result.is_err());
 
     if let Err(TensorError::NotVectorError(rank)) = result {
-        assert_eq!(rank, 2);
+        assert_eq!(rank, 3);
     } else {
         panic!("Expected NotVectorError");
     }
