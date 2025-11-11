@@ -1,5 +1,8 @@
 use tensor::{Tensor, TensorError};
 
+    // TODO: Future optimization - Arc-based zero-copy fwd/back pass
+    // See docs/performance_optimization.md for full implementation details
+
 #[derive(Debug, Clone, Copy)]
 pub enum ActivationType {
     ReLU,
@@ -11,7 +14,7 @@ pub struct Layer {
     biases: Tensor,
     activation_type: ActivationType,
 
-    // Cached for backward pass (used later in Phase 5)
+    // cache for backprop
     last_input: Option<Tensor>,
     last_z: Option<Tensor>,
     last_activation: Option<Tensor>,
@@ -37,6 +40,7 @@ impl Layer {
 
     /// Helper function to add bias with broadcasting
     /// Adds 1D bias to each row of 2D matrix
+    /// TODO: implement broadcasting in the tensor lib, reduce overhead here. 
     fn add_bias(&self, matrix: &Tensor) -> Result<Tensor, TensorError> {
         if matrix.shape.len() != 2 {
             return Err(TensorError::NotMatrixError(matrix.shape.len()));
@@ -69,8 +73,9 @@ impl Layer {
     /// Input shape: [batch_size, n_inputs]
     /// Output shape: [batch_size, n_outputs]
     pub fn forward(&mut self, input: &Tensor) -> Result<Tensor, TensorError> {
+
         // Cache the input for backward pass
-        self.last_input = Some(input.clone());
+        self.last_input = Some(input.clone()); // TODO: switch to arcs for performance / zero-copy 
 
         // Linear transformation: z = input · weights + biases
         // input: [batch_size, n_inputs]
@@ -100,23 +105,11 @@ impl Layer {
     ///
     /// Computes gradients with respect to inputs, weights, and biases.
     ///
-    /// # Arguments
-    /// * `grad_output` - Gradient from the next layer (dL/dActivation)
-    ///   - For output layer with softmax+cross-entropy: pass (y_pred - y_true)
-    ///   - For hidden layers: pass gradient from next layer's backward pass
-    ///
-    /// # Returns
-    /// * `(grad_input, grad_weights, grad_biases)` tuple where:
-    ///   - `grad_input`: Gradient w.r.t. input (dL/dInput) - pass to previous layer
-    ///   - `grad_weights`: Gradient w.r.t. weights (dL/dWeights) - for parameter updates
-    ///   - `grad_biases`: Gradient w.r.t. biases (dL/dBiases) - for parameter updates
-    ///
-    /// # Note
     /// - ReLU derivative computed explicitly inline (1 if z > 0, else 0)
     /// - Softmax assumes cross-entropy loss (simplified derivative)
     /// - Gradients are averaged over the batch
     pub fn backward(&self, grad_output: &Tensor) -> Result<(Tensor, Tensor, Tensor), TensorError> {
-        // Validation: Ensure forward pass was called and values are cached
+
         let last_input = self.last_input.as_ref()
             .expect("backward() called before forward() - no cached input");
         let last_z = self.last_z.as_ref()
@@ -135,8 +128,9 @@ impl Layer {
         // Extract batch size for averaging gradients
         let batch_size = last_input.shape[0];
 
-        // Step 1: Compute dL/dZ (gradient w.r.t. pre-activation)
+        // 1: Compute dL/dZ (gradient w.r.t. pre-activation)
         let grad_z = match self.activation_type {
+
             ActivationType::ReLU => {
                 // ReLU derivative: 1 if z > 0, else 0
                 // Compute derivative mask explicitly inline
@@ -150,6 +144,7 @@ impl Layer {
                 // dL/dZ = dL/dActivation ⊙ activation'(Z)
                 grad_output.view().elem_wise_mult(&relu_derivative.view())?
             }
+
             ActivationType::Softmax => {
                 // For softmax + cross-entropy, derivative simplifies to:
                 // dL/dZ = y_pred - y_true (assumed already computed in grad_output)
@@ -157,23 +152,21 @@ impl Layer {
             }
         };
 
-        // Step 2: Compute dL/dWeights = (input^T · dL/dZ) / batch_size
+        // 2: Compute dL/dWeights = (input^T · dL/dZ) / batch_size
         // Input shape: [batch_size, n_inputs]
-        // Input^T shape: [n_inputs, batch_size]
         // dL/dZ shape: [batch_size, n_outputs]
         // Result shape: [n_inputs, n_outputs]
         let input_transposed = last_input.view().transpose()?;
         let grad_weights_sum = input_transposed.matmul(&grad_z.view())?;
         let grad_weights = grad_weights_sum.view().div(batch_size as f32)?;
 
-        // Step 3: Compute dL/dBiases = sum(dL/dZ, axis=0) / batch_size
-        // Sum over batch dimension, then average
+        // 3: Compute dL/dBiases = sum(dL/dZ, axis=0) / batch_size
         // dL/dZ shape: [batch_size, n_outputs]
         // Result shape: [n_outputs]
         let grad_biases_sum = grad_z.view().sum_axis(0)?;
         let grad_biases = grad_biases_sum.view().div(batch_size as f32)?;
 
-        // Step 4: Compute dL/dInput = dL/dZ · weights^T (for propagation to previous layer)
+        // 4: Compute dL/dInput = dL/dZ · weights^T (for propagation to previous layer)
         // dL/dZ shape: [batch_size, n_outputs]
         // Weights^T shape: [n_outputs, n_inputs]
         // Result shape: [batch_size, n_inputs]
@@ -183,36 +176,4 @@ impl Layer {
         Ok((grad_input, grad_weights, grad_biases))
     }
 
-    // TODO: Future optimization - Arc-based zero-copy forward pass
-    //
-    // This method will eliminate tensor cloning during caching by using Arc (atomic reference counting).
-    // Performance benefit: ~3x reduction in memory allocation per layer forward pass.
-    //
-    // Migration path:
-    // 1. Change Layer fields to Option<Arc<Tensor>>
-    // 2. Accept Arc<Tensor> parameter instead of &Tensor
-    // 3. Use Arc::clone() which just increments refcount (no data copy)
-    // 4. Return Arc<Tensor> for zero-copy chaining between layers
-    //
-    // See docs/performance_optimization.md for full implementation details
-    //
-    // pub fn forward_arc(&mut self, input: Arc<Tensor>) -> Result<Arc<Tensor>, TensorError> {
-    //     self.last_input = Some(Arc::clone(&input));
-    //
-    //     let z = Arc::new(
-    //         input.view()
-    //             .matmul(&self.weights.view())?
-    //             .view()
-    //             .add(&self.biases.view())?
-    //     );
-    //     self.last_z = Some(Arc::clone(&z));
-    //
-    //     let activation = Arc::new(match self.activation_type {
-    //         ActivationType::ReLU => z.view().relu()?,
-    //         ActivationType::Softmax => z.view().softmax()?,
-    //     });
-    //
-    //     self.last_activation = Some(Arc::clone(&activation));
-    //     Ok(activation)
-    // }
 }
