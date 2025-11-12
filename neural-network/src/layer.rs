@@ -134,7 +134,7 @@ impl Layer {
             ActivationType::ReLU => {
                 // ReLU derivative: 1 if z > 0, else 0
                 // Compute derivative mask explicitly inline
-                let relu_derivative_data: Vec<f32> = last_z.elements
+                let relu_derivative_data: Vec<f32> = last_z.view().elements
                     .iter()
                     .map(|&z| if z > 0.0 { 1.0 } else { 0.0 })
                     .collect();
@@ -157,7 +157,7 @@ impl Layer {
         // dL/dZ shape: [batch_size, n_outputs]
         // Result shape: [n_inputs, n_outputs]
         let input_transposed = last_input.view().transpose()?;
-        let grad_weights_sum = input_transposed.matmul(&grad_z.view())?;
+        let grad_weights_sum = input_transposed.view().matmul(&grad_z.view())?;
         let grad_weights = grad_weights_sum.view().div(batch_size as f32)?;
 
         // 3: Compute dL/dBiases = sum(dL/dZ, axis=0) / batch_size
@@ -171,7 +171,7 @@ impl Layer {
         // Weights^T shape: [n_outputs, n_inputs]
         // Result shape: [batch_size, n_inputs]
         let weights_transposed = self.weights.view().transpose()?;
-        let grad_input = grad_z.view().matmul(&weights_transposed)?;
+        let grad_input = grad_z.view().matmul(&weights_transposed.view())?;
 
         Ok((grad_input, grad_weights, grad_biases))
     }
