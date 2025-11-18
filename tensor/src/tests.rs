@@ -2153,3 +2153,110 @@ fn softmax_rejects_3d_tensor() {
         panic!("Expected NotVectorError");
     }
 }
+
+#[test]
+fn broadcast_add_same_shape() {
+    // When shapes are identical, should delegate to add()
+    let tensor_a = Tensor::new(vec![1.0, 2.0, 3.0, 4.0], vec![2, 2]);
+    let tensor_b = Tensor::new(vec![10.0, 20.0, 30.0, 40.0], vec![2, 2]);
+
+    let result = tensor_a.view().broadcast_add(&tensor_b.view()).unwrap();
+
+    assert_eq!(result.shape, vec![2, 2]);
+    assert_eq!(result.elements, vec![11.0, 22.0, 33.0, 44.0]);
+}
+
+#[test]
+fn broadcast_add_2d_matrix_1d_vector() {
+    // Test the main use case: 2D matrix + 1D vector broadcasting
+    // Matrix: [[1, 2], [3, 4]]
+    // Bias:   [10, 20]
+    // Result: [[11, 22], [13, 24]]
+    let matrix = Tensor::new(vec![1.0, 2.0, 3.0, 4.0], vec![2, 2]);
+    let bias = Tensor::new(vec![10.0, 20.0], vec![2]);
+
+    let result = matrix.view().broadcast_add(&bias.view()).unwrap();
+
+    assert_eq!(result.shape, vec![2, 2]);
+    assert_eq!(result.elements, vec![11.0, 22.0, 13.0, 24.0]);
+}
+
+#[test]
+fn broadcast_add_larger_batch() {
+    // Test broadcasting with a larger batch size
+    // Matrix: 3x4 (3 rows, 4 features)
+    // Bias:   [1, 2, 3, 4]
+    let matrix = Tensor::new(
+        vec![
+            10.0, 20.0, 30.0, 40.0,  // row 0
+            50.0, 60.0, 70.0, 80.0,  // row 1
+            90.0, 100.0, 110.0, 120.0, // row 2
+        ],
+        vec![3, 4]
+    );
+    let bias = Tensor::new(vec![1.0, 2.0, 3.0, 4.0], vec![4]);
+
+    let result = matrix.view().broadcast_add(&bias.view()).unwrap();
+
+    assert_eq!(result.shape, vec![3, 4]);
+    assert_eq!(
+        result.elements,
+        vec![
+            11.0, 22.0, 33.0, 44.0,     // row 0 + bias
+            51.0, 62.0, 73.0, 84.0,     // row 1 + bias
+            91.0, 102.0, 113.0, 124.0,  // row 2 + bias
+        ]
+    );
+}
+
+#[test]
+fn broadcast_add_incompatible_vector_length() {
+    // Vector length doesn't match matrix's second dimension
+    let matrix = Tensor::new(vec![1.0, 2.0, 3.0, 4.0], vec![2, 2]);
+    let bias = Tensor::new(vec![10.0, 20.0, 30.0], vec![3]); // Wrong size!
+
+    let result = matrix.view().broadcast_add(&bias.view());
+
+    assert!(result.is_err());
+    if let Err(TensorError::IncompatibleShapes { left, right }) = result {
+        assert_eq!(left, vec![2, 2]);
+        assert_eq!(right, vec![3]);
+    } else {
+        panic!("Expected IncompatibleShapes error");
+    }
+}
+
+#[test]
+fn broadcast_add_unsupported_pattern() {
+    // Test unsupported broadcasting patterns (e.g., 1D + 2D, 3D + 1D, etc.)
+    let vector = Tensor::new(vec![1.0, 2.0], vec![2]);
+    let matrix = Tensor::new(vec![10.0, 20.0, 30.0, 40.0], vec![2, 2]);
+
+    // 1D + 2D is not supported (only 2D + 1D)
+    let result = vector.view().broadcast_add(&matrix.view());
+
+    assert!(result.is_err());
+    if let Err(TensorError::IncompatibleShapes { left, right }) = result {
+        assert_eq!(left, vec![2]);
+        assert_eq!(right, vec![2, 2]);
+    } else {
+        panic!("Expected IncompatibleShapes error");
+    }
+}
+
+#[test]
+fn broadcast_add_3d_tensor_error() {
+    // Broadcasting with 3D tensors is not supported
+    let tensor_3d = Tensor::new(vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0], vec![2, 2, 2]);
+    let vector = Tensor::new(vec![1.0, 2.0], vec![2]);
+
+    let result = tensor_3d.view().broadcast_add(&vector.view());
+
+    assert!(result.is_err());
+    if let Err(TensorError::IncompatibleShapes { left, right }) = result {
+        assert_eq!(left, vec![2, 2, 2]);
+        assert_eq!(right, vec![2]);
+    } else {
+        panic!("Expected IncompatibleShapes error");
+    }
+}

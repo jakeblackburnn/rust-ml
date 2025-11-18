@@ -199,6 +199,48 @@ impl<'a> TensorView<'a> {
         Ok( Tensor::new(results, self.shape.clone()))
     }
 
+    pub fn broadcast_add(&self, other: &TensorView) -> Result<Tensor, TensorError> {
+        // If shapes are identical, delegate to existing add method
+        if self.shape == other.shape {
+            return self.add(other);
+        }
+
+        // Handle 2D matrix + 1D vector broadcasting
+        if self.shape.len() == 2 && other.shape.len() == 1 {
+            let (batch_size, n_features) = (self.shape[0], self.shape[1]);
+            let vector_len = other.shape[0];
+
+            // Validate vector length matches matrix's second dimension
+            if vector_len != n_features {
+                return Err(TensorError::IncompatibleShapes {
+                    left: self.shape.clone(),
+                    right: other.shape.clone(),
+                });
+            }
+
+            // Perform broadcasting: add vector to each row of matrix
+            let total_elements = batch_size * n_features;
+            let mut results = Vec::with_capacity(total_elements);
+
+            for row_idx in 0..batch_size {
+                let row_offset = row_idx * n_features;
+                for col_idx in 0..n_features {
+                    let matrix_elem = self.elements[row_offset + col_idx];
+                    let vector_elem = other.elements[col_idx];
+                    results.push(matrix_elem + vector_elem);
+                }
+            }
+
+            return Ok(Tensor::new(results, self.shape.clone()));
+        }
+
+        // Unsupported broadcasting pattern
+        Err(TensorError::IncompatibleShapes {
+            left: self.shape.clone(),
+            right: other.shape.clone(),
+        })
+    }
+
     pub fn sub(&self, other: &TensorView) -> Result<Tensor, TensorError> {
         if self.shape != other.shape {
             return Err( TensorError::ShapeMismatch {

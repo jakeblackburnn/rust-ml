@@ -21,6 +21,10 @@ pub enum TensorError {
     },
     NotMatrixError(usize),
     NotVectorError(usize),
+    IncompatibleShapes {
+        left: Vec<usize>,
+        right: Vec<usize>,
+    },
 
 }
 
@@ -75,6 +79,14 @@ impl fmt::Display for TensorError {
 
             TensorError::NotVectorError(rank) => {
                 write!(f, "Expected Vector, found rank {} tensor.", rank)
+            }
+
+            TensorError::IncompatibleShapes { left, right } => {
+                write!(
+                    f,
+                    "Incompatible shapes for broadcasting: {:?} and {:?}",
+                    left, right
+                )
             }
         }
     }
