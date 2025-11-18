@@ -38,37 +38,6 @@ impl Layer {
         }
     }
 
-    /// Helper function to add bias with broadcasting
-    /// Adds 1D bias to each row of 2D matrix
-    /// TODO: implement broadcasting in the tensor lib, reduce overhead here. 
-    fn add_bias(&self, matrix: &Tensor) -> Result<Tensor, TensorError> {
-        if matrix.shape.len() != 2 {
-            return Err(TensorError::NotMatrixError(matrix.shape.len()));
-        }
-
-        let (batch_size, n_outputs) = (matrix.shape[0], matrix.shape[1]);
-
-        if self.biases.shape[0] != n_outputs {
-            return Err(TensorError::ShapeMismatch {
-                provided: self.biases.shape.clone(),
-                expected: vec![n_outputs],
-            });
-        }
-
-        let mut result = Vec::with_capacity(batch_size * n_outputs);
-
-        // Add bias to each row
-        for batch_idx in 0..batch_size {
-            for out_idx in 0..n_outputs {
-                let matrix_val = matrix.get_nd(&[batch_idx, out_idx])?;
-                let bias_val = self.biases.get_nd(&[out_idx])?;
-                result.push(matrix_val + bias_val);
-            }
-        }
-
-        Ok(Tensor::new(result, vec![batch_size, n_outputs]))
-    }
-
     /// Forward pass through the layer
     /// Input shape: [batch_size, n_inputs]
     /// Output shape: [batch_size, n_outputs]
@@ -84,7 +53,7 @@ impl Layer {
         let z_temp = input.view().matmul(&self.weights.view())?;
 
         // Add biases with broadcasting (bias is 1D, z_temp is 2D)
-        let z = self.add_bias(&z_temp)?;
+        let z = z_temp.view().broadcast_add(&self.biases.view())?;
 
         // Cache pre-activation for backward pass
         self.last_z = Some(z.clone());
