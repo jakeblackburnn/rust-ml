@@ -25,6 +25,7 @@ pub enum TensorError {
         left: Vec<usize>,
         right: Vec<usize>,
     },
+    InvalidLogarithmInput,
 
 }
 
@@ -87,6 +88,10 @@ impl fmt::Display for TensorError {
                     "Incompatible shapes for broadcasting: {:?} and {:?}",
                     left, right
                 )
+            }
+
+            TensorError::InvalidLogarithmInput => {
+                write!(f, "Cannot compute logarithm of negative value")
             }
         }
     }

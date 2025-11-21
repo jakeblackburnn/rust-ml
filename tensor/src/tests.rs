@@ -1832,9 +1832,64 @@ fn square_single_element() {
     let tensor = Tensor::new(vec![-5.0], vec![1]);
     let view = tensor.view();
     let result = view.square().unwrap();
-    
+
     assert_eq!(result.elements, vec![25.0]);
     assert_eq!(result.shape, vec![1]);
+}
+
+#[test]
+fn ln_vector() {
+    let tensor = Tensor::new(vec![1.0, 2.718281828, 7.389056099], vec![3]);
+    let view = tensor.view();
+    let result = view.ln().unwrap();
+
+    assert!((result.view().get(&[0]).unwrap() - 0.0).abs() < 1e-6);
+    assert!((result.view().get(&[1]).unwrap() - 1.0).abs() < 1e-6);
+    assert!((result.view().get(&[2]).unwrap() - 2.0).abs() < 1e-6);
+    assert_eq!(result.shape, vec![3]);
+}
+
+#[test]
+fn ln_matrix() {
+    let tensor = Tensor::new(vec![1.0, 2.718281828, 7.389056099, 20.085537], vec![2, 2]);
+    let view = tensor.view();
+    let result = view.ln().unwrap();
+
+    assert!((result.view().get(&[0, 0]).unwrap() - 0.0).abs() < 1e-6);
+    assert!((result.view().get(&[0, 1]).unwrap() - 1.0).abs() < 1e-6);
+    assert!((result.view().get(&[1, 0]).unwrap() - 2.0).abs() < 1e-6);
+    assert!((result.view().get(&[1, 1]).unwrap() - 3.0).abs() < 1e-6);
+    assert_eq!(result.shape, vec![2, 2]);
+}
+
+#[test]
+fn ln_single_element() {
+    let tensor = Tensor::new(vec![2.718281828], vec![1]);
+    let view = tensor.view();
+    let result = view.ln().unwrap();
+
+    assert!((result.view().get(&[0]).unwrap() - 1.0).abs() < 1e-6);
+    assert_eq!(result.shape, vec![1]);
+}
+
+#[test]
+fn ln_with_epsilon() {
+    let tensor = Tensor::new(vec![0.0], vec![1]);
+    let view = tensor.view();
+    let result = view.ln().unwrap();
+
+    // ln(0 + 1e-7) ≈ ln(1e-7) ≈ -16.118
+    assert!((result.view().get(&[0]).unwrap() - (-16.118095)).abs() < 1e-6);
+    assert_eq!(result.shape, vec![1]);
+}
+
+#[test]
+fn ln_negative_error() {
+    let tensor = Tensor::new(vec![1.0, -0.5, 2.0], vec![3]);
+    let view = tensor.view();
+    let result = view.ln();
+
+    assert!(result.is_err());
 }
 
 #[test]
@@ -2258,5 +2313,65 @@ fn broadcast_add_3d_tensor_error() {
         assert_eq!(right, vec![2]);
     } else {
         panic!("Expected IncompatibleShapes error");
+    }
+}
+
+#[test]
+fn argmax_axis_matrix_axis_1() {
+    // Find argmax along axis 1 (across columns) - primary use case for neural network predictions
+    // Matrix: [[1.0, 5.0, 3.0],
+    //          [2.0, 1.0, 4.0]]
+    let tensor = Tensor::new(vec![1.0, 5.0, 3.0, 2.0, 1.0, 4.0], vec![2, 3]);
+    let view = tensor.view();
+    let result = view.argmax_axis(1).unwrap();
+
+    // Row 0: max is 5.0 at index 1
+    // Row 1: max is 4.0 at index 2
+    assert_eq!(result.len(), 2);
+    assert_eq!(result, vec![1, 2]);
+}
+
+#[test]
+fn argmax_axis_matrix_axis_0() {
+    // Find argmax along axis 0 (down rows)
+    // Matrix: [[1.0, 2.0, 3.0],
+    //          [4.0, 5.0, 6.0]]
+    let tensor = Tensor::new(vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0], vec![2, 3]);
+    let view = tensor.view();
+    let result = view.argmax_axis(0).unwrap();
+
+    // Col 0: max(1.0, 4.0) = 4.0 at index 1
+    // Col 1: max(2.0, 5.0) = 5.0 at index 1
+    // Col 2: max(3.0, 6.0) = 6.0 at index 1
+    assert_eq!(result.len(), 3);
+    assert_eq!(result, vec![1, 1, 1]);
+}
+
+#[test]
+fn argmax_axis_vector() {
+    // Find argmax of a vector (reduces to scalar result)
+    let tensor = Tensor::new(vec![1.0, 2.0, 5.0, 3.0], vec![4]);
+    let view = tensor.view();
+    let result = view.argmax_axis(0).unwrap();
+
+    // Max is 5.0 at index 2
+    assert_eq!(result.len(), 1);
+    assert_eq!(result, vec![2]);
+}
+
+#[test]
+fn argmax_axis_invalid_axis() {
+    // Test error handling for invalid axis
+    let tensor = Tensor::new(vec![1.0, 2.0, 3.0, 4.0], vec![2, 2]);
+    let view = tensor.view();
+
+    let result = view.argmax_axis(2); // Matrix only has axes 0 and 1
+    assert!(result.is_err());
+
+    if let Err(TensorError::CoordsOutOfBounds { rank: _, provided, max }) = result {
+        assert_eq!(provided, 2);
+        assert_eq!(max, 1);
+    } else {
+        panic!("Expected CoordsOutOfBounds error");
     }
 }

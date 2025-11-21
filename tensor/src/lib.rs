@@ -393,6 +393,36 @@ impl<'a> TensorView<'a> {
         Ok( Tensor::new(results, self.shape.clone()) )
     }
 
+    pub fn ln(&self) -> Result<Tensor, TensorError> {
+        let len = self.shape.iter().product();
+        let mut results = vec![0.0; len];
+
+        let mut coords = vec![0; self.shape.len()];
+
+        for i in 0..len {
+            let elem = self.get(&coords)?;
+
+            // Check for negative values
+            if elem < 0.0 {
+                return Err(TensorError::InvalidLogarithmInput);
+            }
+
+            // Apply natural logarithm with epsilon for numerical stability
+            results[i] = (elem + 1e-7).ln();
+
+            // increment coords
+            for j in ( 0..coords.len() ).rev() {
+                coords[j] += 1;
+                if coords[j] < self.shape[j] {
+                    break;
+                }
+                coords[j] = 0;
+            }
+        }
+
+        Ok( Tensor::new(results, self.shape.clone()) )
+    }
+
     pub fn softmax(&self) -> Result<Tensor, TensorError> {
         // Normalize shape: 1D [n] becomes 2D [1, n]
         let (batch_size, num_features) = match self.shape.len() {
@@ -527,6 +557,80 @@ impl<'a> TensorView<'a> {
         }
 
         Ok(Tensor::new(result_elements, result_shape))
+    }
+
+    pub fn argmax_axis(&self, axis: usize) -> Result<Vec<usize>, TensorError> {
+        // Validate axis is in range
+        if axis >= self.shape.len() {
+            return Err(TensorError::CoordsOutOfBounds {
+                rank: axis + 1,
+                provided: axis,
+                max: self.shape.len() - 1,
+            });
+        }
+
+        // Calculate result shape by removing the axis dimension
+        let mut result_shape = Vec::new();
+        for (i, &dim) in self.shape.iter().enumerate() {
+            if i != axis {
+                result_shape.push(dim);
+            }
+        }
+
+        // Handle edge case: if result is scalar (all dimensions reduced)
+        if result_shape.is_empty() {
+            result_shape.push(1);
+        }
+
+        // Calculate result size
+        let result_len: usize = result_shape.iter().product();
+        let mut result_indices = Vec::with_capacity(result_len);
+
+        // Iterate through all positions in the result
+        let mut result_coords = vec![0; if result_shape.len() == 1 && result_shape[0] == 1 { 0 } else { result_shape.len() }];
+
+        for _result_idx in 0..result_len {
+            // Build full coordinates by inserting axis position
+            let mut full_coords = Vec::new();
+            let mut result_coord_idx = 0;
+            for i in 0..self.shape.len() {
+                if i == axis {
+                    full_coords.push(0); // Placeholder, will iterate
+                } else {
+                    if result_coord_idx < result_coords.len() {
+                        full_coords.push(result_coords[result_coord_idx]);
+                        result_coord_idx += 1;
+                    }
+                }
+            }
+
+            // Find argmax along the axis dimension
+            let mut max_val = f32::NEG_INFINITY;
+            let mut max_idx = 0;
+            for axis_val in 0..self.shape[axis] {
+                full_coords[axis] = axis_val;
+                let val = self.get(&full_coords)?;
+                if val > max_val {
+                    max_val = val;
+                    max_idx = axis_val;
+                }
+            }
+
+            result_indices.push(max_idx);
+
+            // Increment result coords
+            if !result_coords.is_empty() {
+                for j in (0..result_coords.len()).rev() {
+                    result_coords[j] += 1;
+                    if result_coords[j] < result_shape[j] {
+                        break;
+                    }
+                    result_coords[j] = 0;
+                }
+            }
+        }
+
+        Ok(result_indices)
     }
 
     pub fn mean(&self) -> Result<f32, TensorError> {
