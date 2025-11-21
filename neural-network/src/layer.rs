@@ -10,8 +10,8 @@ pub enum ActivationType {
 }
 
 pub struct Layer {
-    weights: Tensor,
-    biases: Tensor,
+    pub weights: Tensor,
+    pub biases: Tensor,
     activation_type: ActivationType,
 
     // cache for backprop
